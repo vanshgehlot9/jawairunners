@@ -10,7 +10,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'SMTP password not configured' }, { status: 500 });
     }
 
-    const { email, fullName, runSeries, category, tshirtSize, phone, city } = data;
+    const { email, fullName, runSeries, category, paymentScreenshotUrl, phone, city } = data;
 
     const htmlContent = `
       <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #FDFBF7; border: 1px solid #E5E5E5; border-radius: 12px; overflow: hidden;">
@@ -35,10 +35,12 @@ export async function POST(req: Request) {
                 <td style="padding: 10px 0; color: #595959; font-size: 14px; border-bottom: 1px solid #F5F5F5;">Category</td>
                 <td style="padding: 10px 0; color: #171717; font-weight: 600; font-size: 14px; text-align: right; border-bottom: 1px solid #F5F5F5;">${category}</td>
               </tr>
+              ${paymentScreenshotUrl ? `
               <tr>
-                <td style="padding: 10px 0; color: #595959; font-size: 14px; border-bottom: 1px solid #F5F5F5;">T-Shirt Size</td>
-                <td style="padding: 10px 0; color: #171717; font-weight: 600; font-size: 14px; text-align: right; border-bottom: 1px solid #F5F5F5;">${tshirtSize}</td>
+                <td style="padding: 10px 0; color: #595959; font-size: 14px; border-bottom: 1px solid #F5F5F5;">Payment</td>
+                <td style="padding: 10px 0; color: #171717; font-weight: 600; font-size: 14px; text-align: right; border-bottom: 1px solid #F5F5F5;"><a href="${paymentScreenshotUrl}" style="color: #294D3A; text-decoration: underline;">View Screenshot</a></td>
               </tr>
+              ` : ''}
               <tr>
                 <td style="padding: 10px 0; color: #595959; font-size: 14px; border-bottom: 1px solid #F5F5F5;">City</td>
                 <td style="padding: 10px 0; color: #171717; font-weight: 600; font-size: 14px; text-align: right; border-bottom: 1px solid #F5F5F5;">${city}</td>

@@ -15,7 +15,7 @@ type RegistrationData = {
   city: string;
   runSeries: string;
   category: string;
-  tshirtSize: string;
+  paymentScreenshotUrl?: string;
   hasPledgedZeroPlastic: boolean;
   createdAt: string;
 };
@@ -68,7 +68,7 @@ export default function AdminPage() {
     if (registrations.length === 0) return;
     
     // Define headers
-    const headers = ['Runner Name', 'Email', 'Phone', 'City', 'Event', 'Category', 'T-Shirt', 'Registered On'];
+    const headers = ['Runner Name', 'Email', 'Phone', 'City', 'Event', 'Category', 'Payment URL', 'Registered On'];
     
     // Create rows
     const rows = registrations.map(reg => [
@@ -78,7 +78,7 @@ export default function AdminPage() {
       `"${reg.city}"`,
       `"${reg.runSeries}"`,
       `"${reg.category}"`,
-      `"${reg.tshirtSize}"`,
+      `"${reg.paymentScreenshotUrl || ''}"`,
       `"${new Date(reg.createdAt).toISOString()}"`
     ]);
     
@@ -107,7 +107,7 @@ export default function AdminPage() {
       "City": reg.city,
       "Event": reg.runSeries,
       "Category": reg.category,
-      "T-Shirt": reg.tshirtSize,
+      "Payment URL": reg.paymentScreenshotUrl || '',
       "Registered On": new Date(reg.createdAt).toLocaleString()
     }));
     
@@ -308,7 +308,7 @@ export default function AdminPage() {
                   <th className="px-6 py-4">Contact</th>
                   <th className="px-6 py-4">City</th>
                   <th className="px-6 py-4">Event & Distance</th>
-                  <th className="px-6 py-4 text-center">T-Shirt</th>
+                  <th className="px-6 py-4 text-center">Payment</th>
                   <th className="px-6 py-4 text-right">Registered On</th>
                 </tr>
               </thead>
@@ -357,8 +357,12 @@ export default function AdminPage() {
                           <span className="text-xs text-[#8C6A43] font-bold uppercase mt-0.5">{reg.category}</span>
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-center font-bold">
-                        {reg.tshirtSize}
+                      <td className="px-6 py-4 whitespace-nowrap text-center text-[12px]">
+                        {reg.paymentScreenshotUrl ? (
+                          <a href={reg.paymentScreenshotUrl} target="_blank" rel="noopener noreferrer" className="text-[#294D3A] underline font-medium hover:text-[#171717]">View SS</a>
+                        ) : (
+                          <span className="text-[#595959]/50">-</span>
+                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-xs text-[#595959]">
                         {new Date(reg.createdAt).toLocaleDateString(undefined, {

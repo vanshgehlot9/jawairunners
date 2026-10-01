@@ -12,9 +12,9 @@ type ParticipantData = {
   email: string;
   phone: string;
   city: string;
-  tshirtSize: string;
   emergencyContact: string;
   hasPledgedZeroPlastic: boolean;
+  paymentScreenshotUrl?: string;
 };
 
 const RUN_SERIES_OPTIONS = [
@@ -81,16 +81,16 @@ const InputField = ({ label, value, onChange, placeholder, error, type = "text",
 };
 
 export function Registration() {
-  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
+  const [step, setStep] = useState<1 | 2 | 3 | 4 | 5>(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedRunSeries, setSelectedRunSeries] = useState<string>("run-1");
   const [selectedCategory, setSelectedCategory] = useState<string>("21k");
+  const [paymentFile, setPaymentFile] = useState<File | null>(null);
   const [participant, setParticipant] = useState<ParticipantData>({
     fullName: "",
     email: "",
     phone: "",
     city: "",
-    tshirtSize: "M",
     emergencyContact: "",
     hasPledgedZeroPlastic: true
   });
@@ -134,10 +134,29 @@ export function Registration() {
   const handleFinalSubmit = async () => {
     setIsSubmitting(true);
     try {
+      let uploadedUrl = "";
+      if (paymentFile) {
+        const formData = new FormData();
+        formData.append("file", paymentFile);
+        const res = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        });
+        const data = await res.json();
+        if (data.url) {
+          uploadedUrl = data.url;
+        }
+      }
+
+      const finalParticipantData = {
+        ...participant,
+        paymentScreenshotUrl: uploadedUrl,
+      };
+
       const registrationsRef = ref(db, 'registrations');
       const newRegistrationRef = push(registrationsRef);
       await set(newRegistrationRef, {
-        ...participant,
+        ...finalParticipantData,
         runSeries: selectedRunSeries,
         category: selectedCategory,
         createdAt: new Date().toISOString()
@@ -149,13 +168,13 @@ export function Registration() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          ...participant,
+          ...finalParticipantData,
           runSeries: selectedRunSeries,
           category: selectedCategory,
         }),
       }).catch(err => console.error("Email send failed:", err));
 
-      setStep(4);
+      setStep(5);
     } catch (error) {
       console.error("Error saving registration:", error);
       alert("There was an error submitting your registration. Please try again.");
@@ -169,9 +188,10 @@ export function Registration() {
 
   // Dynamic progress value
   let progress = 0.2;
-  if (step === 2) progress = 0.5;
-  if (step === 3) progress = 0.8;
-  if (step === 4) progress = 1.0;
+  if (step === 2) progress = 0.4;
+  if (step === 3) progress = 0.6;
+  if (step === 4) progress = 0.8;
+  if (step === 5) progress = 1.0;
 
   return (
     <section 
@@ -233,16 +253,17 @@ export function Registration() {
           <div className="w-full max-w-[620px] bg-[#FAF8F5] rounded-[24px] border border-white/30 shadow-2xl p-6 sm:p-8 md:p-10 flex flex-col relative min-h-[580px]">
             
             {/* Progress Header */}
-            {step < 4 && (
+            {step < 5 && (
               <div className="mb-8 pb-6 border-b border-[#171717]/10">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-[10px] font-bold tracking-[0.18em] text-[#8C6A43] uppercase">
-                    STEP 0{step} OF 03
+                    STEP 0{step} OF 04
                   </span>
                   <span className="text-[11px] font-bold tracking-wider text-[#294D3A] uppercase">
                     {step === 1 && "PARTICIPANT DETAILS"}
                     {step === 2 && "SELECT RUN & DISTANCE"}
-                    {step === 3 && "ECO COMMITMENT & CONFIRM"}
+                    {step === 3 && "DONATION & PAYMENT"}
+                    {step === 4 && "ECO COMMITMENT & CONFIRM"}
                   </span>
                 </div>
 
@@ -305,27 +326,14 @@ export function Registration() {
                         />
                       </div>
 
-                      {/* T-Shirt Size */}
+                      {/* T-Shirt Size Info */}
                       <div className="mb-4">
                         <label className="text-[10px] font-bold tracking-[0.15em] uppercase text-[#171A18]/60 block mb-2">
-                          ECO T-SHIRT SIZE (ORGANIC COTTON)
+                          ECO APPAREL
                         </label>
-                        <div className="grid grid-cols-5 gap-2">
-                          {["S", "M", "L", "XL", "XXL"].map((sz) => (
-                            <button
-                              key={sz}
-                              type="button"
-                              onClick={() => setParticipant({ ...participant, tshirtSize: sz })}
-                              className={`py-2 rounded-lg text-[12px] font-bold border transition-colors cursor-pointer ${
-                                participant.tshirtSize === sz
-                                  ? "bg-[#294D3A] text-white border-[#294D3A]"
-                                  : "bg-white text-[#171717] border-[#171717]/15 hover:border-[#294D3A]/40"
-                              }`}
-                            >
-                              {sz}
-                            </button>
-                          ))}
-                        </div>
+                        <p className="text-[13px] text-[#171A18]/80 bg-black/5 p-3 rounded-xl border border-black/10">
+                          We provide a jacket or t-shirt at this time depending on availability.
+                        </p>
                       </div>
                     </div>
 
@@ -428,6 +436,81 @@ export function Registration() {
                         onClick={() => setStep(3)}
                         className="flex-1 h-[50px] bg-[#294D3A] text-white rounded-xl flex items-center justify-center gap-3 font-bold text-[12px] tracking-[0.12em] uppercase hover:bg-[#1C3628] transition-all shadow-md group cursor-pointer"
                       >
+                        <span>CONTINUE TO DONATION</span>
+                        <ArrowRight className="w-4 h-4 text-[#D7B66A] group-hover:translate-x-1 transition-transform" />
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* STEP 3: DONATION & PAYMENT */}
+                {step === 3 && (
+                  <motion.div
+                    key="step3"
+                    initial={{ opacity: 0, x: 10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -10 }}
+                    transition={{ duration: 0.35 }}
+                    className="flex flex-col h-full"
+                  >
+                    <div className="flex-1 space-y-6">
+                      
+                      <div className="bg-[#FAF8F5] p-5 rounded-xl border border-[#294D3A]/20">
+                        <h4 className="text-[12px] font-bold tracking-[0.15em] uppercase text-[#294D3A] mb-3">Please Donate Us</h4>
+                        <p className="text-[13px] text-[#171A18]/80 leading-relaxed mb-4">
+                          Support our conservation cause. Please make your donation to the official bank account below and attach the payment screenshot.
+                        </p>
+                        
+                        <div className="bg-white p-4 rounded-lg border border-[#171717]/10 space-y-2 text-[13px]">
+                          <div className="flex justify-between">
+                            <span className="text-[#171A18]/50 uppercase text-[10px] font-bold">Account Name</span>
+                            <span className="font-semibold text-[#171A18]">STEPWELLS RENOVATOR FOUNDATION</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-[#171A18]/50 uppercase text-[10px] font-bold">Account Number</span>
+                            <span className="font-semibold text-[#171A18]">45598441621</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-[#171A18]/50 uppercase text-[10px] font-bold">IFSC Code</span>
+                            <span className="font-semibold text-[#171A18]">SBIN0031201</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-[#171A18]/50 uppercase text-[10px] font-bold">Bank</span>
+                            <span className="font-semibold text-[#171A18]">SBI JALORI GAYE JODHPUR</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col">
+                        <label className="text-[10px] font-bold tracking-[0.15em] uppercase text-[#171A18]/60 block mb-2">
+                          ATTACH PAYMENT SCREENSHOT
+                        </label>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => setPaymentFile(e.target.files ? e.target.files[0] : null)}
+                          className="text-[13px] file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-[11px] file:font-bold file:tracking-wider file:bg-[#294D3A]/10 file:text-[#294D3A] hover:file:bg-[#294D3A]/20 transition-colors cursor-pointer"
+                        />
+                        {paymentFile && (
+                          <span className="text-[11px] text-[#294D3A] mt-2 font-medium">Selected: {paymentFile.name}</span>
+                        )}
+                      </div>
+
+                    </div>
+
+                    <div className="mt-6 flex gap-3 pt-4 border-t border-[#171717]/10">
+                      <button
+                        type="button"
+                        onClick={() => setStep(2)}
+                        className="h-[50px] px-5 text-[#171717]/70 text-[11px] font-bold tracking-wider hover:text-[#171717] transition-colors cursor-pointer"
+                      >
+                        BACK
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setStep(4)}
+                        className="flex-1 h-[50px] bg-[#294D3A] text-white rounded-xl flex items-center justify-center gap-3 font-bold text-[12px] tracking-[0.12em] uppercase hover:bg-[#1C3628] transition-all shadow-md group cursor-pointer"
+                      >
                         <span>REVIEW & ECO PLEDGE</span>
                         <ArrowRight className="w-4 h-4 text-[#D7B66A] group-hover:translate-x-1 transition-transform" />
                       </button>
@@ -435,10 +518,10 @@ export function Registration() {
                   </motion.div>
                 )}
 
-                {/* STEP 3: ECO COMMITMENT & CONFIRM */}
-                {step === 3 && (
+                {/* STEP 4: ECO COMMITMENT & CONFIRM */}
+                {step === 4 && (
                   <motion.div
-                    key="step3"
+                    key="step4"
                     initial={{ opacity: 0, x: 10 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -10 }}
@@ -521,7 +604,7 @@ export function Registration() {
                     <div className="mt-6 flex gap-3 pt-4 border-t border-[#171717]/10">
                       <button
                         type="button"
-                        onClick={() => setStep(2)}
+                        onClick={() => setStep(3)}
                         className="h-[50px] px-5 text-[#171717]/70 text-[11px] font-bold tracking-wider hover:text-[#171717] transition-colors cursor-pointer"
                       >
                         BACK
@@ -549,10 +632,10 @@ export function Registration() {
                   </motion.div>
                 )}
 
-                {/* STEP 4: PASS / CONFIRMATION */}
-                {step === 4 && (
+                {/* STEP 5: PASS / CONFIRMATION */}
+                {step === 5 && (
                   <motion.div
-                    key="step4"
+                    key="step5"
                     initial={{ opacity: 0, scale: 0.96 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ duration: 0.45 }}
@@ -646,12 +729,12 @@ export function Registration() {
                         type="button"
                         onClick={() => {
                           setStep(1);
+                          setPaymentFile(null);
                           setParticipant({
                             fullName: "",
                             email: "",
                             phone: "",
                             city: "",
-                            tshirtSize: "M",
                             emergencyContact: "",
                             hasPledgedZeroPlastic: true
                           });
