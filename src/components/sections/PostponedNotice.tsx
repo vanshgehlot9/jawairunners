@@ -102,7 +102,7 @@ export function PostponedNotice() {
             </span>
           </h1>
           <p className="text-[16px] sm:text-[18px] lg:text-[21px] text-[#171717]/85 font-light leading-[1.6] sm:leading-[1.65] max-w-[880px]">
-            Due to an active wildfire across the granite ridges and wildlife corridors of Jawai, the upcoming Jawai Triathlon has been temporarily postponed. The safety of our participants, local communities, and sanctuary wildlife remains our foremost duty.
+            Due to a wildfire affecting the Jawai region, the upcoming Jawai Triathlon has been temporarily postponed.
           </p>
         </div>
 
@@ -115,13 +115,10 @@ export function PostponedNotice() {
             {/* The Situation Statement */}
             <div className="space-y-4 sm:space-y-5 text-[15px] sm:text-[16px] text-[#171717]/85 font-light leading-[1.65] max-w-[680px]">
               <p className="text-[16px] sm:text-[17px] text-[#171717] font-normal leading-relaxed">
-                Over the past 48 hours, a significant wildfire incident affected stretches of the rugged granite hills and forested scrub tracts in the Jawai wilderness, including territory around Bagheera&apos;s Camp and surrounding leopard habitats.
+                The fire has impacted areas around Kameshwar Mahadev and the wildlife corridors connecting leopard habitats across Jawai. With the safety of participants, local communities, and wildlife at stake, proceeding with the event is not an option.
               </p>
               <p>
-                Our movement was founded upon a clear principle: <strong className="font-semibold text-[#171717]">Jungle Pacho Lanao — Bring the Jungle Back</strong>. We exist to protect this unique landscape where wildlife, villages, granite boulders, and ancient stepwells coexist. To proceed with an athletic event through recovering terrain and stressed animal passages would be hazardous to participants and directly at odds with our conservation values.
-              </p>
-              <p>
-                Forest department officials, local rangers, and Stepwells Renovater Foundation ground personnel are stationed across the landscape actively monitoring animal movements, securing trail boundaries, and coordinating initial post-fire recovery operations.
+                Jawai Runners stands for <strong className="font-semibold text-[#171717]">Jungle Pacho Lanao — Bring the Jungle Back.</strong> Protecting Jawai&apos;s landscape and the wildlife that calls it home comes first. We will resume the event when conditions are safe.
               </p>
             </div>
 
@@ -268,7 +265,7 @@ export function PostponedNotice() {
               {/* Documentary Caption */}
               <div className="pt-3 sm:pt-4 text-left">
                 <p className="text-[12px] sm:text-[12.5px] text-[#171717]/70 font-light leading-relaxed italic">
-                  Field footage documenting the active blaze across granite hill tracts near Bagheera&apos;s Camp. Forest containment operations and wildlife observation are actively underway.
+                  Field footage documenting the active blaze across granite hill tracts and wildlife corridors around Kameshwar Mahadev in Jawai.
                 </p>
               </div>
 
