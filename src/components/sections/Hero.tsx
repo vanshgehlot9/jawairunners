@@ -44,8 +44,8 @@ export function Hero() {
                 transition={{ duration: 0.9, delay: 0.1, ease: "easeOut" }}
                 className={styles.title}
               >
-                Run to Save <br />
-                <span className={styles.titleItalic}>Jawai.</span>
+                Where Every Step <br />
+                <span className={styles.titleItalic}>Brings Nature Back.</span>
               </motion.h1>
 
               {/* Concise, impactful editorial tagline */}
@@ -55,7 +55,7 @@ export function Hero() {
                 transition={{ duration: 0.7, delay: 0.25 }}
                 className={styles.tagline}
               >
-                A conservation movement uniting runners, Rabari communities, and wildlife guardians to restore and protect the wild living landscape of Jawai.
+                Welcome to Jawai Triathlon — a conservation-driven outdoor experience in Rajasthan uniting running, cycling, and horse riding to protect and restore our natural heritage.
               </motion.p>
 
               {/* CTA Buttons */}
@@ -70,8 +70,8 @@ export function Hero() {
                   <ArrowRight className="w-4 h-4" aria-hidden="true" />
                 </Link>
 
-                <Link href="#three-runs" className={`${styles.secondaryBtn} w-full sm:w-auto justify-center`}>
-                  <span>EXPLORE THE 3 RUNS</span>
+                <Link href="#experience" className={`${styles.secondaryBtn} w-full sm:w-auto justify-center`}>
+                  <span>EXPLORE EXPERIENCES</span>
                 </Link>
               </motion.div>
 
@@ -82,7 +82,9 @@ export function Hero() {
                 transition={{ duration: 0.7, delay: 0.5 }}
                 className={styles.meta}
               >
-                <span className={styles.metaTag}>#junglepachholanohai</span>
+                <span className={styles.metaTag}>#JUNGLEPACHOLANAO</span>
+                <span aria-hidden="true" className="hidden sm:inline">•</span>
+                <span>BRING THE JUNGLE BACK</span>
                 <span aria-hidden="true" className="hidden sm:inline">•</span>
                 <span>ORGANISED BY: STEPWELLS RENOVATER FOUNDATION</span>
               </motion.div>
@@ -144,8 +146,8 @@ export function Hero() {
                 transition={{ duration: 0.7, delay: 0.2 }}
                 className="text-[44px] sm:text-[48px] text-white font-serif font-semibold leading-[1.02] tracking-tight mb-4"
               >
-                Run to Save <br />
-                <span className="italic text-[#8ec94a] font-normal">Jawai.</span>
+                Where Every Step <br />
+                <span className="italic text-[#8ec94a] font-normal">Brings Nature Back.</span>
               </motion.h1>
 
               {/* Secondary Mission Paragraph */}
@@ -155,7 +157,7 @@ export function Hero() {
                 transition={{ duration: 0.6, delay: 0.3 }}
                 className="text-[15px] sm:text-[16px] text-white/85 font-light leading-[1.5] mb-8"
               >
-                A conservation movement uniting runners, Rabari communities, and wildlife guardians to restore and protect the wild landscape of Jawai.
+                Welcome to Jawai Triathlon — a conservation-driven outdoor experience uniting running, cycling, and horse riding to protect and restore nature in Rajasthan.
               </motion.p>
 
               {/* Action Group */}
@@ -174,10 +176,10 @@ export function Hero() {
                 </Link>
 
                 <Link 
-                  href="#three-runs" 
+                  href="#experience" 
                   className="flex items-center justify-center w-full h-[48px] bg-black/25 backdrop-blur-sm border border-white/30 text-white rounded-xl text-[12px] font-bold tracking-wide uppercase active:scale-[0.98] transition-transform active:bg-white/10"
                 >
-                  <span>EXPLORE THE 3 RUNS</span>
+                  <span>EXPLORE EXPERIENCES</span>
                 </Link>
               </motion.div>
 
@@ -189,7 +191,7 @@ export function Hero() {
                 className="flex flex-col gap-1.5"
               >
                 <span className="text-[11px] font-bold tracking-[0.18em] text-[#C69A3A] uppercase">
-                  #JUNGLEPACHLONAHOI
+                  #JUNGLEPACHOLANAO · BRING THE JUNGLE BACK
                 </span>
                 <span className="text-[9.5px] font-bold tracking-[0.12em] text-white/50 uppercase">
                   ORGANISED BY · STEPWELLS RENOVATER FOUNDATION

@@ -13,9 +13,9 @@ const FAQ_DATA = [
   },
   {
     order: "02",
-    question: "WHEN ARE THE RUNS?",
+    question: "WHAT DISCIPLINES AND STARTING POINTS CAN I CHOOSE?",
     answer:
-      "The series features three milestone runs: Run 1 — AWAKEN (25 October), Run 2 — RESTORE (7 November), and Run 3 — CELEBRATE (25 December). You can participate in individual runs or register for the complete Trilogy Pass."
+      "Jawai Triathlon features three outdoor disciplines: Trail Running, Wilderness Cycling, and Heritage Horse Riding. Participants can select from three starting gateways: Jawai Bandh Start (granite hills & wilderness), Bera Start (cultural heritage & community), or Conservation Start (active restoration & stepwell regeneration)."
   },
   {
     order: "03",

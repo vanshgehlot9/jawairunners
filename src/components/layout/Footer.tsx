@@ -12,31 +12,31 @@ export function Footer() {
       <footer className="hidden md:block bg-[#141B16] text-[#FAF8F5] pt-16 pb-12 border-t border-white/10 relative z-10">
         <div className="max-w-[1440px] mx-auto px-6 md:px-12 lg:px-16 flex flex-col">
           
-          {/* Top Banner with 3 Runs Summary */}
+          {/* Top Banner with 3 Disciplines Summary */}
           <div className="p-8 rounded-[20px] bg-white/5 border border-white/10 mb-16">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="border-b md:border-b-0 md:border-r border-white/10 pb-4 md:pb-0 md:pr-4">
                 <span className="text-[10px] font-mono font-bold tracking-[0.18em] text-[#C69A3A] uppercase block mb-1">
-                  RUN 1 · 25 OCTOBER
+                  01 · ON FOOT & ENDURANCE
                 </span>
-                <span className="text-[17px] font-bold text-white block">RUN 1 — AWAKEN</span>
-                <p className="text-[12px] text-white/60 mt-1">Launch of the 100,000 Native Plants Campaign</p>
+                <span className="text-[17px] font-bold text-white block">JAWAI RUNNER</span>
+                <p className="text-[12px] text-white/60 mt-1">Challenge yourself on natural granite trails and wilderness paths.</p>
               </div>
 
               <div className="border-b md:border-b-0 md:border-r border-white/10 pb-4 md:pb-0 md:pr-4">
                 <span className="text-[10px] font-mono font-bold tracking-[0.18em] text-[#C69A3A] uppercase block mb-1">
-                  RUN 2 · 07 NOVEMBER
+                  02 · PEDAL & EXPEDITION
                 </span>
-                <span className="text-[17px] font-bold text-white block">RUN 2 — RESTORE</span>
-                <p className="text-[12px] text-white/60 mt-1">Progress Update & Restoration Sites</p>
+                <span className="text-[17px] font-bold text-white block">JAWAI CYCLIST</span>
+                <p className="text-[12px] text-white/60 mt-1">Scenic gravel corridors, scrub tracks, and zero carbon recreation.</p>
               </div>
 
               <div>
                 <span className="text-[10px] font-mono font-bold tracking-[0.18em] text-[#C69A3A] uppercase block mb-1">
-                  RUN 3 · 25 DECEMBER
+                  03 · HERITAGE EQUESTRIAN
                 </span>
-                <span className="text-[17px] font-bold text-white block">RUN 3 — CELEBRATE</span>
-                <p className="text-[12px] text-white/60 mt-1">Celebrating First Major Restoration Milestone</p>
+                <span className="text-[17px] font-bold text-white block">JAWAI HORSE RIDER</span>
+                <p className="text-[12px] text-white/60 mt-1">Guided countryside routes with trained handlers & animal welfare.</p>
               </div>
             </div>
           </div>
@@ -75,7 +75,7 @@ export function Footer() {
                 THE CONSERVATION MOVEMENT
               </span>
               <div className="flex flex-col space-y-3 text-[13px] text-white/80">
-                <Link href="#three-runs" className="hover:text-white transition-colors">Three Runs Series</Link>
+                <Link href="#experience" className="hover:text-white transition-colors">Choose Your Experience</Link>
                 <Link href="#foundation" className="hover:text-white transition-colors">Stepwells Renovater Foundation</Link>
                 <Link href="#registration" className="hover:text-white transition-colors">Registration & Eco-Pass</Link>
                 <Link href="#faq" className="hover:text-white transition-colors">Frequently Asked Questions</Link>
@@ -167,10 +167,10 @@ export function Footer() {
           </span>
           <nav aria-label="Footer mobile navigation" className="flex flex-col">
             <Link 
-              href="#three-runs" 
+              href="#experience" 
               className="flex items-center justify-between py-[14px] border-b border-white/10 group active:bg-white/5 transition-colors focus-visible:bg-white/5 outline-none"
             >
-              <span className="text-[15px] text-white/90 font-medium">Three Runs Series</span>
+              <span className="text-[15px] text-white/90 font-medium">Choose Your Experience</span>
               <ArrowRight className="w-4 h-4 text-[#C69A3A]/70 group-active:translate-x-1 group-focus-visible:translate-x-1 transition-transform duration-200" />
             </Link>
             <Link 

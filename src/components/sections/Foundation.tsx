@@ -1,237 +1,123 @@
-/**
- * Foundation.tsx
- * ---------------
- * STEPWELLS RENOVATER FOUNDATION — 3-Column Vertical Editorial Pillar System.
- *
- * Architecture:
- *   DATA (initiatives array)
- *     → COMPONENT (FoundationColumn)
- *       → VISUAL (InitiativeVisual: water | growth | community)
- *
- * Target Composition:
- *   Three vertical columns separated by thin editorial rules:
- *
- *        │                   │
- *   01   │     02            │      03
- *        │                   │
- * visual │    visual         │    visual
- *        │                   │
- * title  │    title          │    title
- *        │                   │
- * text   │    text           │    text
- *        │                   │
- * status │    status         │    status
- *
- * NO card containers. NO rounded rectangles. NO card shadows. NO emojis.
- * The page itself is the canvas.
- */
-
 "use client";
 
-import { useState } from "react";
-import { motion } from "framer-motion";
+import React, { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
-import { ArrowUpRight } from "lucide-react";
-import { InitiativeVisual } from "@/components/ui/InitiativeVisual";
-import type { InitiativeVisualType } from "@/components/ui/InitiativeVisual";
+import Link from "next/link";
+import {
+  Droplets,
+  Trees,
+  Landmark,
+  Users,
+  Compass,
+  ArrowRight,
+  ShieldCheck,
+  HeartHandshake,
+  CheckCircle2,
+  Layers,
+} from "lucide-react";
 
-// ─── Data model ───────────────────────────────────────────────────────────
-
-type Initiative = {
+type FoundationPillar = {
   id: string;
-  number: string;        // "01", "02", "03"
-  category: string;      // "WATER ARCHITECTURE", etc.
+  number: string;
   title: string;
-  description: string;
-  status: string;        // "ACTIVE IN JAWAI"
-  visualType: InitiativeVisualType;
-  visualLabel: string;   // accessible label for SVG
+  category: string;
+  summary: string;
+  impactTag: string;
+  image: string;
+  icon: React.ElementType;
 };
 
-const INITIATIVES: Initiative[] = [
+const PILLARS: FoundationPillar[] = [
   {
-    id: "initiative-water",
+    id: "heritage",
     number: "01",
-    category: "WATER ARCHITECTURE",
-    title: "Stepwell & Baori Regeneration",
-    description:
-      "Reviving Rajasthan's historic sub-surface water architecture. By desilting ancient stepwells and stone catchment basins, we ensure perennial water pans for leopards, ungulates, and pastoral herds in the dry summer months.",
-    status: "ACTIVE IN JAWAI",
-    visualType: "water",
-    visualLabel: "Stepwell geometry and water contour lines — water restoration motif",
+    title: "Preservation of Natural & Cultural Heritage",
+    category: "HISTORIC ARCHITECTURE",
+    summary:
+      "Reviving ancient stepwells (baoris), stone catchments, and traditional water monuments across Rajasthan, safeguarding living heritage for future generations.",
+    impactTag: "CENTURIES OF ANCESTRAL WISDOM",
+    image: "/Jawai/IMG20260305072014.jpg",
+    icon: Landmark,
   },
   {
-    id: "initiative-growth",
+    id: "conservation",
     number: "02",
-    category: "AFFORESTATION / GROWTH",
-    title: "Native Nursery & Seed Broadcasting",
-    description:
-      "Building decentralized village nurseries that cultivate indigenous desert species. Through Jawai Runners, over 100,000 saplings and seed balls are introduced directly into degraded forest tracts and ridge corridors.",
-    status: "ACTIVE IN JAWAI",
-    visualType: "growth",
-    visualLabel: "Seed and branching root system — native plant growth motif",
+    title: "Environmental Conservation & Afforestation",
+    category: "ARID ECOLOGY",
+    summary:
+      "Cultivating indigenous tree species (Dhok, Khejri, Kair, Ber) in village nurseries and restoring biodiversity corridors across the leopard wilderness.",
+    impactTag: "HABITAT CORRIDOR PROTECTION",
+    image: "/Jawai/IMG20260305062531.jpg",
+    icon: Trees,
   },
   {
-    id: "initiative-community",
+    id: "water",
     number: "03",
-    category: "COMMUNITY STEWARDSHIP",
-    title: "Rabari Cultural & Livelihood Alliances",
-    description:
-      "Working alongside the indigenous Rabari pastoralists — the traditional guardians of the leopards. We provide eco-tourism guide training, trail marshal roles, and compensation support for livestock coexistence.",
-    status: "ACTIVE IN JAWAI",
-    visualType: "community",
-    visualLabel: "Interconnected path and node network — community alliance motif",
+    title: "Water-Body Cleanliness & Hydrology",
+    category: "WATER SANCTUARY",
+    summary:
+      "Desilting historic reservoirs, cleaning public lake peripheries, and establishing clean perennial water sources for wildlife and pastoral herds.",
+    impactTag: "PERENNIAL SURFACE & SUB-SURFACE WATER",
+    image: "/Jawai/Lake_Scene_1280x720.jpg",
+    icon: Droplets,
+  },
+  {
+    id: "community",
+    number: "04",
+    title: "Community Development & Indigenous Alliances",
+    category: "RABARI STEWARDSHIP",
+    summary:
+      "Working closely alongside indigenous Rabari pastoralists, providing eco-tourism training, trail marshal opportunities, and coexistence support.",
+    impactTag: "PASTORAL COEXISTENCE & LIVELIHOODS",
+    image: "/Jawai/IMG20260304182849.jpg",
+    icon: Users,
+  },
+  {
+    id: "awareness",
+    number: "05",
+    title: "Public Awareness & Active Participation",
+    category: "YOUTH & ADVOCACY",
+    summary:
+      "Transforming athletic endurance into direct conservation advocacy, inspiring participants and volunteers from diverse backgrounds into lifelong stewards.",
+    impactTag: "TURNING ADVENTURE INTO ACTION",
+    image: "/Jawai/IMG20260304183756.jpg",
+    icon: Compass,
   },
 ];
 
-// ─── Vertical Column Pillar Component ─────────────────────────────────────
-
-interface FoundationColumnProps {
-  initiative: Initiative;
-  index: number;
-}
-
-function FoundationColumn({ initiative, index }: FoundationColumnProps) {
-  const [isHovered, setIsHovered] = useState(false);
-
-  return (
-    <motion.article
-      initial={{ opacity: 0, y: 24 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      transition={{ duration: 0.6, delay: index * 0.14 }}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      className={[
-        "group relative flex flex-col justify-between shrink-0 w-[85vw] snap-center lg:w-auto",
-        "px-6 sm:px-8 lg:px-10 xl:px-12 py-10 lg:py-14",
-        "transition-colors duration-400 cursor-default",
-        isHovered ? "bg-[#1F3026]/[0.025]" : "bg-transparent",
-      ].join(" ")}
-      aria-label={`Initiative ${initiative.number}: ${initiative.title}`}
-    >
-      <div>
-        {/* Top: Large editorial printed number + category tag + subtle hover arrow */}
-        <div className="flex items-start justify-between mb-6">
-          <div>
-            <span
-              className={[
-                "font-serif italic leading-none select-none block",
-                "text-[60px] sm:text-[72px] lg:text-[80px]",
-                "transition-colors duration-300",
-                isHovered ? "text-[#304B38]" : "text-[#304B38]/20",
-              ].join(" ")}
-              aria-hidden="true"
-            >
-              {initiative.number}
-            </span>
-            <span
-              className={[
-                "text-[9.5px] font-bold tracking-[0.22em] uppercase block mt-3",
-                "transition-colors duration-300",
-                isHovered ? "text-[#C69A3A]" : "text-[#8C6A43]",
-              ].join(" ")}
-            >
-              {initiative.category}
-            </span>
-          </div>
-
-          {/* Directional arrow that smoothly transitions on hover */}
-          <div
-            className={[
-              "w-7 h-7 flex items-center justify-center pt-2",
-              "transition-all duration-300",
-              isHovered
-                ? "opacity-100 text-[#304B38] translate-x-0.5 -translate-y-0.5"
-                : "opacity-0 text-[#304B38]/30",
-            ].join(" ")}
-            aria-hidden="true"
-          >
-            <ArrowUpRight className="w-4 h-4" />
-          </div>
-        </div>
-
-        {/* Dedicated Visual Space — upper-middle portion of the column */}
-        <div className="w-full h-[96px] lg:h-[110px] flex items-center justify-start my-6">
-          <div className="w-[110px] h-[88px]">
-            <InitiativeVisual
-              type={initiative.visualType}
-              isHovered={isHovered}
-              label={initiative.visualLabel}
-              className="w-full h-full"
-            />
-          </div>
-        </div>
-
-        {/* Title */}
-        <h3
-          className={[
-            "font-bold leading-[1.2] tracking-tight mb-4",
-            "text-[21px] sm:text-[23px] lg:text-[24px] xl:text-[26px]",
-            "transition-colors duration-300",
-            isHovered ? "text-[#1F3026]" : "text-[#171717]",
-          ].join(" ")}
-        >
-          {initiative.title}
-        </h3>
-
-        {/* Description */}
-        <p className="text-[14px] lg:text-[14.5px] leading-[1.7] text-[#171717]/70 font-light">
-          {initiative.description}
-        </p>
-      </div>
-
-      {/* Bottom: Active status indicator — small green/gold dot with pulse, uppercase typography */}
-      <div className="pt-10 mt-6 flex items-center gap-2.5">
-        <span className="relative flex h-2 w-2" aria-hidden="true">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#629A13] opacity-75" />
-          <span className="relative inline-flex rounded-full h-2 w-2 bg-[#629A13]" />
-        </span>
-        <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-[#304B38]">
-          {initiative.status}
-        </span>
-      </div>
-    </motion.article>
-  );
-}
-
-// ─── Foundation Section ───────────────────────────────────────────────────
-
 export function Foundation() {
+  const [activePillarIndex, setActivePillarIndex] = useState<number>(0);
+  const activePillar = PILLARS[activePillarIndex];
+
   return (
     <section
       id="foundation"
-      aria-labelledby="foundation-heading"
-      className="relative w-full bg-[#FAF8F5] py-24 lg:py-36 overflow-hidden border-b border-[#304B38]/10"
+      className="relative w-full bg-[#FAF8F5] py-24 lg:py-32 overflow-hidden border-b border-[#304B38]/10"
+      aria-labelledby="foundation-main-heading"
     >
-      <div className="max-w-[1440px] mx-auto px-6 md:px-12 lg:px-16 w-full">
+      {/* Background Topographic Texture */}
+      <div
+        className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[radial-gradient(#304B38_1px,transparent_1px)] [background-size:24px_24px]"
+        aria-hidden="true"
+      />
 
-        {/* ── Section header ─────────────────────────────────────── */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-start mb-16 lg:mb-24">
-
-          {/* Left: Statement */}
-          <div className="lg:col-span-7 xl:col-span-6">
-
-            <motion.p
-              initial={{ opacity: 0, y: 10 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5 }}
-              className="text-[10px] font-bold tracking-[0.22em] text-[#8C6A43] uppercase mb-6"
-            >
-              THE ORGANIZING BODY
-            </motion.p>
+      <div className="relative max-w-[1440px] mx-auto px-6 md:px-12 lg:px-16 w-full">
+        {/* ── SECTION HEADER ── */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16 items-start mb-16 lg:mb-20 pb-10 border-b border-[#171717]/10">
+          
+          {/* Left Column: Main Title */}
+          <div className="lg:col-span-7">
 
             <motion.h2
-              id="foundation-heading"
-              initial={{ opacity: 0, y: 22 }}
+              id="foundation-main-heading"
+              initial={{ opacity: 0, y: 18 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.65, delay: 0.08 }}
-              className="text-[38px] sm:text-[50px] md:text-[60px] font-medium leading-[1.03] tracking-tight text-[#171717] mb-7"
+              className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-medium leading-[1.05] tracking-tight text-[#171717] mb-6"
             >
-              STEPWELLS RENOVATER{" "}
-              <br className="hidden sm:block" />
+              STEPWELLS RENOVATER <br />
               <span className="text-[#304B38] italic font-serif">FOUNDATION.</span>
             </motion.h2>
 
@@ -239,123 +125,240 @@ export function Foundation() {
               initial={{ opacity: 0, y: 12 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: 0.18 }}
-              className="text-[16px] md:text-[18px] text-[#171717]/65 font-light leading-relaxed max-w-[520px]"
+              transition={{ duration: 0.5, delay: 0.16 }}
+              className="text-lg sm:text-xl text-[#171717]/85 font-light leading-relaxed max-w-[620px]"
             >
-              Stepwells Renovater Foundation is dedicated to the ecological and
-              architectural renaissance of Rajasthan's arid frontiers. In Jawai,
-              we bridge ancestral water engineering with contemporary athletic
-              conservation.
+              Stepwells Renovater Foundation works towards the preservation of natural and cultural heritage, environmental conservation, water-body cleanliness, community development, and public awareness.
             </motion.p>
-
-            {/* Thin rule + tagline */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: 0.28 }}
-              className="flex items-center gap-4 mt-9"
-            >
-              <div className="w-12 h-px bg-[#C69A3A]" aria-hidden="true" />
-              <span className="text-[11px] font-semibold tracking-[0.16em] uppercase text-[#8C6A43]">
-                Three Active Initiatives · Jawai, Rajasthan
-              </span>
-            </motion.div>
           </div>
 
-          {/* Right: Editorial pull-quote */}
+          {/* Right Column: Mission Context & Guiding Spirit Highlight */}
           <motion.div
-            initial={{ opacity: 0, y: 18 }}
+            initial={{ opacity: 0, y: 16 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6, delay: 0.2 }}
-            className="lg:col-span-5 xl:col-span-6 relative"
+            className="lg:col-span-5 flex flex-col justify-between h-full space-y-6"
           >
-            {/* Quote panel — photo fragment + text overlay */}
-            <div
-              className="relative overflow-hidden rounded-[4px] bg-[#1F3026]"
-              style={{ minHeight: "340px" }}
-            >
-              {/* Background photo — muted */}
-              <div className="absolute inset-0">
-                <Image
-                  src="/Jawai/IMG20260305072014.jpg"
-                  alt="Granite vistas of Jawai"
-                  fill
-                  className="object-cover opacity-30 mix-blend-luminosity"
-                  sizes="(max-width: 1024px) 100vw, 40vw"
-                />
-                {/* Left gradient so text is always readable */}
-                <div className="absolute inset-0 bg-gradient-to-r from-[#1F3026] via-[#1F3026]/80 to-[#1F3026]/40" />
-              </div>
+            <div className="p-6 sm:p-7 rounded-[22px] bg-[#FFFFFF] border border-[#304B38]/15 shadow-xs">
+              <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-[#8C6A43] block mb-2">
+                PRACTICAL STEWARDSHIP
+              </span>
+              <p className="text-[14.5px] text-[#171717]/80 font-light leading-relaxed">
+                Through its initiatives, the Foundation seeks to encourage practical participation in protecting the environment and preserving heritage for future generations.
+              </p>
+            </div>
 
-              <div className="relative z-10 p-8 lg:p-10 flex flex-col justify-between h-full" style={{ minHeight: "340px" }}>
-                {/* Category eyebrow */}
-                <span className="text-[9px] font-mono tracking-[0.22em] text-[#C69A3A] uppercase">
-                  FOUNDATION COMMITMENT
+            <div className="p-6 sm:p-7 rounded-[22px] bg-[#1F3026] text-white border border-[#1F3026] shadow-sm">
+              <div className="flex items-center gap-2 text-[#C69A3A] mb-2">
+                <span className="text-[10px] font-bold tracking-[0.2em] uppercase">
+                  SHARED VISION
                 </span>
-
-                {/* Pull quote */}
-                <div className="my-auto py-8">
-                  <div
-                    className="text-[80px] leading-none text-[#C69A3A]/20 font-serif select-none mb-2"
-                    aria-hidden="true"
-                  >
-                    "
-                  </div>
-                  <p className="text-[17px] lg:text-[19px] font-medium text-white/95 leading-[1.65] tracking-wide">
-                    A living landscape requires water at its roots, native canopy
-                    above, and people who run together to protect it.
-                  </p>
-                </div>
-
-                {/* Attribution */}
-                <div className="flex items-center gap-3 pt-5 border-t border-white/10">
-                  <div
-                    className="w-9 h-9 rounded-full bg-[#C69A3A] flex items-center justify-center font-bold text-black text-[11px] tracking-wider flex-shrink-0"
-                    aria-hidden="true"
-                  >
-                    SRF
-                  </div>
-                  <div>
-                    <span className="block text-[12px] font-bold text-white leading-tight">
-                      Stepwells Renovater Foundation
-                    </span>
-                    <span className="text-[10px] text-[#C69A3A] tracking-[0.1em] uppercase">
-                      Rajasthan Water & Habitat Initiative
-                    </span>
-                  </div>
-                </div>
               </div>
+              <p className="text-[14px] text-white/90 font-light leading-relaxed mb-3">
+                The initiative invites people from different backgrounds to work towards a shared goal: a more sustainable relationship between people, communities, and nature.
+              </p>
+              <span className="text-[11px] font-bold tracking-[0.16em] text-[#8ec94a] uppercase">
+                #JUNGLEPACHOLANAO · BRING THE JUNGLE BACK
+              </span>
             </div>
           </motion.div>
         </div>
 
-        {/* ── Chapter sub-header bar ───────────────────────────── */}
-        <div className="w-full border-t border-[#304B38]/15 pt-5 pb-5 flex items-center justify-between">
-          <span className="text-[10px] font-bold tracking-[0.22em] text-[#8C6A43] uppercase">
-            FOUNDATION PILLARS · 01 — 03
-          </span>
-          <span className="text-[10px] font-mono tracking-[0.16em] text-[#171717]/40 uppercase hidden sm:inline">
-            ACTIVE CONSERVATION SYSTEMS
-          </span>
+        {/* ── DYNAMIC INTERACTIVE SHOWCASE (5 PILLARS + DYNAMIC PREVIEW) ── */}
+        <div className="mb-14">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <span className="text-[10px] font-bold tracking-[0.22em] text-[#8C6A43] uppercase block mb-1">
+                FOUNDATION PILLARS & INITIATIVES
+              </span>
+              <h3 className="font-serif text-2xl sm:text-3xl text-[#171717] font-semibold">
+                Explore Core Operational Areas
+              </h3>
+            </div>
+
+            <span className="text-[11px] font-mono tracking-[0.16em] text-[#171717]/50 uppercase hidden md:inline">
+              SELECT TO PREVIEW DETAILS
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
+            
+            {/* Left 5 Columns: Interactive List of Pillars */}
+            <div className="lg:col-span-5 flex flex-col gap-3">
+              {PILLARS.map((pillar, idx) => {
+                const Icon = pillar.icon;
+                const isSelected = activePillarIndex === idx;
+
+                return (
+                  <motion.button
+                    key={pillar.id}
+                    onClick={() => setActivePillarIndex(idx)}
+                    whileHover={{ x: 4 }}
+                    transition={{ duration: 0.2 }}
+                    className={`relative text-left p-5 rounded-[18px] transition-all duration-300 border flex items-start gap-4 cursor-pointer w-full ${
+                      isSelected
+                        ? "bg-[#1F3026] text-white border-[#1F3026] shadow-md"
+                        : "bg-[#FFFFFF] text-[#171717] border-[#304B38]/12 hover:border-[#304B38]/30 hover:bg-[#FAF8F5]"
+                    }`}
+                  >
+                    {/* Active Indicator Bar */}
+                    {isSelected && (
+                      <motion.div
+                        layoutId="activeFoundationIndicator"
+                        className="absolute left-0 top-3 bottom-3 w-1.5 bg-[#C69A3A] rounded-r-full"
+                        transition={{ type: "spring", stiffness: 350, damping: 30 }}
+                      />
+                    )}
+
+                    <div
+                      className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
+                        isSelected
+                          ? "bg-white/10 text-[#C69A3A]"
+                          : "bg-[#FAF8F5] text-[#304B38] border border-[#304B38]/10"
+                      }`}
+                    >
+                      <Icon className="w-5 h-5" />
+                    </div>
+
+                    <div className="flex-1 pr-2">
+                      <div className="flex items-center justify-between gap-2 mb-1">
+                        <span
+                          className={`text-[9.5px] font-bold tracking-[0.18em] uppercase ${
+                            isSelected ? "text-[#C69A3A]" : "text-[#8C6A43]"
+                          }`}
+                        >
+                          {pillar.category}
+                        </span>
+                        <span
+                          className={`font-serif italic text-sm ${
+                            isSelected ? "text-white/60" : "text-[#171717]/40"
+                          }`}
+                        >
+                          {pillar.number}
+                        </span>
+                      </div>
+
+                      <h4
+                        className={`text-[15px] font-bold leading-snug ${
+                          isSelected ? "text-white" : "text-[#171717]"
+                        }`}
+                      >
+                        {pillar.title}
+                      </h4>
+                    </div>
+                  </motion.button>
+                );
+              })}
+            </div>
+
+            {/* Right 7 Columns: Dynamic Animated Preview Card */}
+            <div className="lg:col-span-7">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={activePillar.id}
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -15 }}
+                  transition={{ duration: 0.4 }}
+                  className="relative rounded-[26px] overflow-hidden bg-[#1F3026] text-white border border-[#304B38]/30 shadow-xl flex flex-col justify-between p-8 sm:p-10 lg:p-12 min-h-[460px] h-full"
+                >
+                  {/* Background Photo with Parallax / Zoom */}
+                  <div className="absolute inset-0 z-0">
+                    <Image
+                      src={activePillar.image}
+                      alt={activePillar.title}
+                      fill
+                      className="object-cover opacity-35 mix-blend-luminosity scale-105 transition-transform duration-1000"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#0a1a10] via-[#0a1a10]/80 to-[#0a1a10]/40" />
+                  </div>
+
+                  {/* Top Badges */}
+                  <div className="relative z-10 flex items-center justify-between">
+                    <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#C69A3A]/25 border border-[#C69A3A]/40 text-[#D7B66A] text-[10px] font-bold tracking-[0.2em] uppercase">
+                      <ShieldCheck className="w-3.5 h-3.5" />
+                      {activePillar.impactTag}
+                    </span>
+                    <span className="font-serif italic text-3xl font-semibold text-white/80">
+                      {activePillar.number}
+                    </span>
+                  </div>
+
+                  {/* Middle Animated Geometric Accent */}
+                  <div className="relative z-10 my-8">
+                    <span className="text-[11px] font-bold tracking-[0.2em] text-[#C69A3A] uppercase block mb-2">
+                      {activePillar.category}
+                    </span>
+                    <h3 className="font-serif text-2xl sm:text-3xl lg:text-4xl text-white font-semibold leading-tight mb-4">
+                      {activePillar.title}
+                    </h3>
+                    <p className="text-white/85 text-[15px] sm:text-[16px] font-light leading-relaxed max-w-xl">
+                      {activePillar.summary}
+                    </p>
+                  </div>
+
+                  {/* Bottom Strip */}
+                  <div className="relative z-10 pt-6 border-t border-white/15 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div>
+                      <span className="block text-[12px] font-bold text-white uppercase tracking-wider">
+                        STEPWELLS RENOVATER FOUNDATION
+                      </span>
+                      <span className="text-[10px] text-[#C69A3A] tracking-[0.14em] uppercase">
+                        RAJASTHAN CONSERVATION INITIATIVE
+                      </span>
+                    </div>
+
+                    <Link
+                      href="#registration"
+                      className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#629A13] hover:bg-[#528210] text-white text-[12px] font-bold tracking-wide uppercase transition-colors"
+                    >
+                      <span>SUPPORT THIS WORK</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </Link>
+                  </div>
+                </motion.div>
+              </AnimatePresence>
+            </div>
+          </div>
         </div>
 
-        {/* ── 3-Column Vertical Editorial Pillar System ─────────── */}
-        {/*
-          Desktop: 3 vertical columns with thin vertical separators (divide-x).
-          Mobile: stacked vertical sequence with subtle horizontal dividers (divide-y).
-          NO card containers, NO rounded boxes, NO shadows.
-        */}
-        <div className="flex flex-row overflow-x-auto snap-x snap-mandatory lg:grid lg:grid-cols-3 border-t border-b border-[#304B38]/15 divide-x-0 lg:divide-x divide-[#304B38]/15 -mx-6 px-6 lg:mx-0 lg:px-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-          {INITIATIVES.map((initiative, i) => (
-            <FoundationColumn
-              key={initiative.id}
-              initiative={initiative}
-              index={i}
-            />
-          ))}
-        </div>
+        {/* ── GUIDING SPIRIT FEATURE BANNER (JAWAI TRIATHLON INTEGRATION) ── */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+          className="rounded-[26px] bg-[#FFFFFF] border border-[#304B38]/18 p-8 sm:p-10 lg:p-12 shadow-xs flex flex-col lg:flex-row items-center justify-between gap-8"
+        >
+          <div className="max-w-[780px]">
+            <h3 className="font-serif text-2xl sm:text-3xl text-[#171717] font-semibold tracking-tight leading-snug mb-4">
+              Jawai Triathlon reflects this commitment by bringing together adventure, public participation, and conservation under the guiding spirit of{" "}
+              <span className="italic text-[#304B38]">Jungle Pacho Lanao — Bring the Jungle Back.</span>
+            </h3>
+
+            <p className="text-[15px] text-[#171717]/75 font-light leading-relaxed">
+              The initiative invites people from different backgrounds to work towards a shared goal: a more sustainable relationship between people, communities, and nature.
+            </p>
+          </div>
+
+          <div className="flex flex-col sm:flex-row lg:flex-col gap-3 w-full lg:w-auto shrink-0">
+            <Link
+              href="#registration"
+              className="flex items-center justify-center gap-2 px-7 py-3.5 rounded-full bg-[#629A13] hover:bg-[#528210] text-white text-[13px] font-bold tracking-wide uppercase shadow-[0_4px_16px_rgba(98,154,19,0.35)] transition-all duration-200 text-center"
+            >
+              <span>JOIN THE TRIATHLON</span>
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+
+            <Link
+              href="#experience"
+              className="flex items-center justify-center gap-2 px-7 py-3.5 rounded-full bg-[#FAF8F5] hover:bg-[#F2EFE8] border border-[#304B38]/20 text-[#304B38] text-[13px] font-bold tracking-wide uppercase transition-all duration-200 text-center"
+            >
+              <span>EXPLORE EXPERIENCES</span>
+            </Link>
+          </div>
+        </motion.div>
 
       </div>
     </section>
