@@ -192,109 +192,183 @@ export function Movement() {
       <div className="relative max-w-[1440px] mx-auto px-6 md:px-12 lg:px-16 w-full">
 
         {/* ===================================================================
-            SECTION 0: MOVEMENT MANIFESTO HERO HEADER (Compact & Impactful)
+            SECTION 0: MOVEMENT MANIFESTO HERO (Balanced 2-Column Editorial)
             =================================================================== */}
-        <div className="flex flex-col items-start max-w-4xl pb-12 sm:pb-14 lg:pb-16">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center pb-14 sm:pb-16 lg:pb-20">
           
-          {/* Top Label */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5 }}
-            className="inline-flex items-center gap-2 mb-3"
-          >
-            <span className="text-[11px] sm:text-[12px] font-mono font-bold tracking-[0.22em] text-[#C69A3A] uppercase">
-              AN INITIATIVE BY STEPWELLS RENOVATER FOUNDATION
-            </span>
-          </motion.div>
-
-          {/* Grand Title: JAWAI RUNNER */}
-          <motion.h2
-            initial={{ opacity: 0, y: 18 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6, delay: 0.08 }}
-            className="text-[44px] sm:text-[56px] lg:text-[68px] font-serif font-medium text-[#171717] leading-[0.98] tracking-tight mb-2"
-          >
-            Jawai Runner
-          </motion.h2>
-
-          {/* Tagline */}
-          <motion.p
-            initial={{ opacity: 0, y: 12 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6, delay: 0.16 }}
-            className="text-[26px] sm:text-[32px] lg:text-[38px] font-serif italic text-[#1F3026] leading-tight mb-4"
-          >
-            Run. Ride. Restore.
-          </motion.p>
-
-          {/* Creed Banner */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6, delay: 0.22 }}
-            className="mb-6 p-3 sm:p-3.5 rounded-xl bg-[#EFECE3] border-l-4 border-[#C69A3A] w-full max-w-2xl"
-          >
-            <span className="text-[12px] sm:text-[14px] font-mono font-bold tracking-[0.16em] text-[#294D3A] uppercase block">
-              JUNGLE PACHO LANAO — BRING THE JUNGLE BACK.
-            </span>
-          </motion.div>
-
-          {/* Narrative paragraphs */}
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6, delay: 0.28 }}
-            className="space-y-3 text-[15px] sm:text-[16px] text-[#171717]/85 font-light leading-relaxed max-w-3xl"
-          >
-            <p>
-              Jawai Runner is more than a sporting event. It is a movement that brings together adventure, fitness, nature, wildlife conservation and community participation to protect and restore the natural heritage of Jawai, Rajasthan.
-            </p>
-            <p>
-              Through running, cycling, horse riding, cleanliness campaigns, plantation drives and community-led conservation activities, we invite people to experience Jawai while contributing to its ecological restoration.
-            </p>
-          </motion.div>
-
-          {/* Bold Editorial Quote */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6, delay: 0.34 }}
-            className="mt-5 mb-6 pt-3.5 border-t border-[#304B38]/15"
-          >
-            <p className="text-[13px] sm:text-[14.5px] font-mono font-bold tracking-[0.18em] text-[#1F3026] uppercase">
-              RUN FOR NATURE. RIDE FOR THE WILD. RESTORE FOR THE FUTURE.
-            </p>
-          </motion.div>
-
-          {/* Action CTAs */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6, delay: 0.4 }}
-            className="flex flex-wrap items-center gap-3"
-          >
-            <a
-              href="#the-experience"
-              className="inline-flex items-center justify-center gap-2 px-6 sm:px-7 py-3 rounded-full bg-[#1F3026] hover:bg-[#14221A] text-white font-bold text-[11px] sm:text-[11.5px] tracking-[0.14em] uppercase transition-all shadow-md group"
+          {/* Left Column: Movement Manifesto */}
+          <div className="lg:col-span-7 flex flex-col items-start">
+            
+            {/* Top Pill Eyebrow */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5 }}
+              className="inline-flex items-center gap-2 mb-3 px-3 py-1 rounded-full bg-[#EFECE3] border border-[#304B38]/12"
             >
-              <span>EXPLORE THE EXPERIENCE</span>
-              <ArrowRight className="w-3.5 h-3.5 text-[#D7B66A] group-hover:translate-x-1 transition-transform" />
-            </a>
+              <span className="w-1.5 h-1.5 rounded-full bg-[#C69A3A]" aria-hidden="true" />
+              <span className="text-[10.5px] sm:text-[11.5px] font-mono font-bold tracking-[0.2em] text-[#294D3A] uppercase">
+                AN INITIATIVE BY STEPWELLS RENOVATER FOUNDATION
+              </span>
+            </motion.div>
 
-            <a
-              href="#registration"
-              className="inline-flex items-center justify-center gap-2 px-6 sm:px-7 py-3 rounded-full bg-white hover:bg-[#EFECE3] border border-[#304B38]/20 text-[#1F3026] font-bold text-[11px] sm:text-[11.5px] tracking-[0.14em] uppercase transition-all shadow-xs"
+            {/* Grand Title: JAWAI RUNNER */}
+            <motion.h2
+              initial={{ opacity: 0, y: 18 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: 0.08 }}
+              className="text-[44px] sm:text-[54px] lg:text-[64px] font-serif font-medium text-[#171717] leading-[1.0] tracking-tight mb-1"
             >
-              <span>JOIN THE MOVEMENT</span>
-            </a>
+              Jawai Runner
+            </motion.h2>
+
+            {/* Tagline */}
+            <motion.p
+              initial={{ opacity: 0, y: 12 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: 0.16 }}
+              className="text-[24px] sm:text-[30px] lg:text-[34px] font-serif italic text-[#1F3026] leading-tight mb-4"
+            >
+              Run. Ride. Restore.
+            </motion.p>
+
+            {/* Creed Banner */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: 0.22 }}
+              className="mb-5 px-3.5 py-2.5 rounded-xl bg-[#EFECE3] border-l-4 border-[#C69A3A] w-full"
+            >
+              <span className="text-[12px] sm:text-[13px] font-mono font-bold tracking-[0.16em] text-[#294D3A] uppercase block">
+                JUNGLE PACHO LANAO — BRING THE JUNGLE BACK.
+              </span>
+            </motion.div>
+
+            {/* Narrative paragraphs */}
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: 0.28 }}
+              className="space-y-3 text-[14.5px] sm:text-[15.5px] text-[#171717]/85 font-light leading-relaxed"
+            >
+              <p>
+                Jawai Runner is more than a sporting event. It is a movement that brings together adventure, fitness, nature, wildlife conservation and community participation to protect and restore the natural heritage of Jawai, Rajasthan.
+              </p>
+              <p>
+                Through running, cycling, horse riding, cleanliness campaigns, plantation drives and community-led conservation activities, we invite people to experience Jawai while contributing to its ecological restoration.
+              </p>
+            </motion.div>
+
+            {/* Bold Editorial Quote */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: 0.34 }}
+              className="mt-4 mb-5 pt-3 border-t border-[#304B38]/15 w-full"
+            >
+              <p className="text-[12.5px] sm:text-[13.5px] font-mono font-bold tracking-[0.18em] text-[#1F3026] uppercase">
+                RUN FOR NATURE. RIDE FOR THE WILD. RESTORE FOR THE FUTURE.
+              </p>
+            </motion.div>
+
+            {/* Action CTAs */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: 0.4 }}
+              className="flex flex-wrap items-center gap-3"
+            >
+              <a
+                href="#the-experience"
+                className="inline-flex items-center justify-center gap-2 px-6 sm:px-7 py-3 rounded-full bg-[#1F3026] hover:bg-[#14221A] text-white font-bold text-[11px] sm:text-[11.5px] tracking-[0.14em] uppercase transition-all shadow-md group"
+              >
+                <span>EXPLORE THE EXPERIENCE</span>
+                <ArrowRight className="w-3.5 h-3.5 text-[#D7B66A] group-hover:translate-x-1 transition-transform" />
+              </a>
+
+              <a
+                href="#registration"
+                className="inline-flex items-center justify-center gap-2 px-6 sm:px-7 py-3 rounded-full bg-white hover:bg-[#EFECE3] border border-[#304B38]/20 text-[#1F3026] font-bold text-[11px] sm:text-[11.5px] tracking-[0.14em] uppercase transition-all shadow-xs"
+              >
+                <span>JOIN THE MOVEMENT</span>
+              </a>
+            </motion.div>
+
+          </div>
+
+          {/* Right Column: Visual Movement Anchor Card */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="lg:col-span-5 relative w-full"
+          >
+            {/* The Visual Card */}
+            <div className="relative rounded-[24px] overflow-hidden bg-[#182B20] border border-[#C69A3A]/30 shadow-xl flex flex-col">
+              
+              {/* Image Frame */}
+              <div className="relative h-[260px] sm:h-[300px] w-full overflow-hidden">
+                <Image
+                  src="/Jawai/Lake_Scene_1280x720.jpg"
+                  alt="Jawai Natural Landscape"
+                  fill
+                  sizes="(max-width: 1024px) 100vw, 450px"
+                  className="object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#182B20] via-black/30 to-black/40" />
+
+                {/* Top Floating Badge */}
+                <div className="absolute top-4 left-4 z-10 flex items-center gap-2">
+                  <span className="px-3 py-1 rounded-full bg-black/60 backdrop-blur-md text-[10px] font-mono font-bold tracking-[0.16em] text-white uppercase border border-white/20">
+                    JAWAI · RAJASTHAN
+                  </span>
+                </div>
+
+                <div className="absolute top-4 right-4 z-10">
+                  <span className="px-2.5 py-0.5 rounded-full bg-[#C69A3A] text-[#14231A] text-[9.5px] font-mono font-bold tracking-wider uppercase">
+                    EST. 2026
+                  </span>
+                </div>
+
+                {/* Text overlay on image bottom */}
+                <div className="absolute bottom-4 left-5 right-5 text-white">
+                  <span className="text-[10px] font-mono tracking-[0.2em] text-[#D7B66A] uppercase block mb-1">
+                    CONSERVATION IN MOTION
+                  </span>
+                  <h4 className="text-[20px] font-serif font-bold text-white leading-tight">
+                    Preserving Granite Hills &amp; Wild Corridors
+                  </h4>
+                </div>
+              </div>
+
+              {/* Lower Card Detail with 5 Activity Tags */}
+              <div className="p-5 sm:p-6 bg-[#182B20] text-white flex flex-col justify-between">
+                <p className="text-[13px] text-white/80 font-light leading-relaxed mb-4">
+                  Where fitness meets ecological restoration — uniting runners, local pastoral communities, and wildlife guardians across Jawai.
+                </p>
+
+                {/* 5 Experience Pills */}
+                <div className="flex flex-wrap gap-2 pt-3 border-t border-white/10">
+                  {["🏃 RUNNING", "🚴 CYCLING", "🏇 HORSE RIDING", "🌱 PLANTATION", "🧹 CLEANING"].map((pill) => (
+                    <span
+                      key={pill}
+                      className="px-2.5 py-1 rounded-md bg-white/10 text-white/90 text-[10px] font-mono font-bold tracking-wider uppercase border border-white/10"
+                    >
+                      {pill}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+            </div>
           </motion.div>
 
         </div>
