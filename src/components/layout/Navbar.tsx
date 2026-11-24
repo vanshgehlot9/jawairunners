@@ -12,10 +12,9 @@ type NavLink = {
 };
 
 const NAV_LINKS: NavLink[] = [
-  { name: "ABOUT", href: "#about" },
-  { name: "EXPERIENCE", href: "#experience" },
-  { name: "CONSERVATION", href: "#conservation-impact" },
-  { name: "ORGANISER", href: "#foundation" },
+  { name: "THE MOVEMENT", href: "#movement" },
+  { name: "THE EXPERIENCE", href: "#the-experience" },
+  { name: "FOUNDATION", href: "#foundation" },
   { name: "FAQ", href: "#faq" }
 ];
 

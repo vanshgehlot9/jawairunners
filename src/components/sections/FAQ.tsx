@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Minus } from "lucide-react";
+import { useEventDates } from "@/lib/event-dates";
 
-const FAQ_DATA = [
+const BASE_FAQ_DATA = [
   {
     order: "01",
     question: "WHAT IS JAWAI RUNNERS AND THE 'RUN TO SAVE JAWAI' MISSION?",
@@ -13,9 +14,14 @@ const FAQ_DATA = [
   },
   {
     order: "02",
-    question: "WHAT DISCIPLINES AND STARTING POINTS CAN I CHOOSE?",
-    answer:
-      "Jawai Triathlon features three outdoor disciplines: Trail Running, Wilderness Cycling, and Heritage Horse Riding. Participants can select from three starting gateways: Jawai Bandh Start (granite hills & wilderness), Bera Start (cultural heritage & community), or Conservation Start (active restoration & stepwell regeneration)."
+    question: "WHEN ARE THE RUNS?",
+    getAnswer: (dates: { run1Date: string; run2Date: string; run3Date: string }) => {
+      const isDefault = dates.run1Date === "REVEALING SOON" && dates.run2Date === "REVEALING SOON";
+      if (isDefault) {
+        return "The series features three milestone runs: Run 1 — AWAKEN, Run 2 — RESTORE, and Run 3 — CELEBRATE. Exact dates will be revealed soon. You can participate in individual runs or register for the complete Trilogy Pass.";
+      }
+      return `The series features three milestone runs: Run 1 — AWAKEN (${dates.run1Date}), Run 2 — RESTORE (${dates.run2Date}), and Run 3 — CELEBRATE (${dates.run3Date}). You can participate in individual runs or register for the complete Trilogy Pass.`;
+    }
   },
   {
     order: "03",
@@ -57,6 +63,24 @@ const FAQ_DATA = [
 
 export function FAQ() {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
+  const eventDates = useEventDates();
+
+  const faqItems = useMemo(() => {
+    return BASE_FAQ_DATA.map((item) => {
+      if (item.getAnswer) {
+        return {
+          order: item.order,
+          question: item.question,
+          answer: item.getAnswer(eventDates)
+        };
+      }
+      return {
+        order: item.order,
+        question: item.question,
+        answer: item.answer as string
+      };
+    });
+  }, [eventDates]);
 
   const toggleFaq = (index: number) => {
     setOpenIndex(openIndex === index ? null : index);
@@ -88,7 +112,7 @@ export function FAQ() {
           {/* RIGHT COLUMN - ACCORDION */}
           <div className="w-full lg:w-[65%] flex flex-col">
             <div className="border-t border-[#171717]/15">
-              {FAQ_DATA.map((item, index) => {
+              {faqItems.map((item, index) => {
                 const isOpen = openIndex === index;
                 
                 return (

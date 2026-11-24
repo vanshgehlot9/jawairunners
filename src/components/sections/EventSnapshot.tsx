@@ -15,7 +15,7 @@ export function EventSnapshot() {
       id: "cp-1",
       number: "01",
       name: "RUN 1 — AWAKEN",
-      date: "25 OCT 2026",
+      date: "REVEALING SOON",
       tagline: "Launch of 100,000 Native Plants Campaign",
       location: "Granite Foothills Basecamp",
       distance: "21K / 10K / 5K",
@@ -25,7 +25,7 @@ export function EventSnapshot() {
       id: "cp-2",
       number: "02",
       name: "RUN 2 — RESTORE",
-      date: "07 NOV 2026",
+      date: "REVEALING SOON",
       tagline: "Progress Update & Restoration Sites",
       location: "Heritage Stepwell Oasis",
       distance: "21K / 10K / 5K",
@@ -35,7 +35,7 @@ export function EventSnapshot() {
       id: "cp-3",
       number: "03",
       name: "RUN 3 — CELEBRATE",
-      date: "25 DEC 2026",
+      date: "REVEALING SOON",
       tagline: "First Major Restoration Milestone",
       location: "Jawai Dam Reservoir Ridge",
       distance: "21K / 10K / 5K",
@@ -83,7 +83,7 @@ export function EventSnapshot() {
               transition={{ duration: 0.5, delay: 0.2 }}
               className="text-[15px] md:text-[16px] text-[#171A18]/75 leading-relaxed mb-8 font-light"
             >
-              From October&apos;s seed broadcasting to December&apos;s winter milestone celebration, every kilometer connects Rajasthan&apos;s ancient granite outcrops with thriving native biodiversity.
+              From inaugural seed broadcasting to the winter milestone celebration, every kilometer connects Rajasthan&apos;s ancient granite outcrops with thriving native biodiversity.
             </motion.p>
 
             {/* Organiser Badge */}
@@ -196,7 +196,7 @@ export function EventSnapshot() {
                 <g transform="translate(50, 150)">
                   <circle r="10" fill={activeCheckpoint === 0 ? "#1F3026" : "#FFFFFF"} stroke="#294D3A" strokeWidth="3" />
                   {activeCheckpoint === 0 && <circle r="4" fill="#C69A3A" />}
-                  <text x="0" y="28" textAnchor="middle" fill="#171A18" fontSize="12" fontWeight="bold">25 OCT</text>
+                  <text x="0" y="28" textAnchor="middle" fill="#171A18" fontSize="10" fontWeight="bold">AWAKEN</text>
                   <text x="0" y="42" textAnchor="middle" fill="#8C6A43" fontSize="9" fontWeight="bold">RUN 1</text>
                 </g>
 
@@ -204,7 +204,7 @@ export function EventSnapshot() {
                 <g transform="translate(250, 50)">
                   <circle r="10" fill={activeCheckpoint === 1 ? "#1F3026" : "#FFFFFF"} stroke="#294D3A" strokeWidth="3" />
                   {activeCheckpoint === 1 && <circle r="4" fill="#C69A3A" />}
-                  <text x="0" y="-22" textAnchor="middle" fill="#171A18" fontSize="12" fontWeight="bold">7 NOV</text>
+                  <text x="0" y="-22" textAnchor="middle" fill="#171A18" fontSize="10" fontWeight="bold">RESTORE</text>
                   <text x="0" y="-10" textAnchor="middle" fill="#8C6A43" fontSize="9" fontWeight="bold">RUN 2</text>
                 </g>
 
@@ -212,7 +212,7 @@ export function EventSnapshot() {
                 <g transform="translate(480, 140)">
                   <circle r="10" fill={activeCheckpoint === 2 ? "#1F3026" : "#FFFFFF"} stroke="#294D3A" strokeWidth="3" />
                   {activeCheckpoint === 2 && <circle r="4" fill="#C69A3A" />}
-                  <text x="0" y="28" textAnchor="middle" fill="#171A18" fontSize="12" fontWeight="bold">25 DEC</text>
+                  <text x="0" y="28" textAnchor="middle" fill="#171A18" fontSize="10" fontWeight="bold">CELEBRATE</text>
                   <text x="0" y="42" textAnchor="middle" fill="#8C6A43" fontSize="9" fontWeight="bold">RUN 3</text>
                 </g>
               </svg>
