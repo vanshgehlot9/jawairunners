@@ -32,6 +32,7 @@ import {
 import { EventDatesConfig, DEFAULT_EVENT_DATES } from "@/lib/event-dates";
 import { MediaPickerField } from "./MediaPickerField";
 import { TextField, TextAreaField, ItemOrderControls } from "./FieldHelpers";
+import { AccountSecurityCard } from "./AccountSecurityCard";
 import type { AdminNavKey } from "./AdminSidebar";
 
 export type RegistrationData = {
@@ -768,6 +769,7 @@ export function PermissionsPanel({
   onSavePermissions,
   onSeedAll,
   onExportBackupJson,
+  onAuditRecorded,
   isSeeding,
 }: {
   currentEmail: string;
@@ -775,6 +777,7 @@ export function PermissionsPanel({
   onSavePermissions: (emails: string[]) => Promise<void>;
   onSeedAll: (overwrite: boolean) => Promise<void>;
   onExportBackupJson: () => void;
+  onAuditRecorded?: () => Promise<void>;
   isSeeding: boolean;
 }) {
   const [emailsText, setEmailsText] = useState(permissions.adminEmails.join("\n"));
@@ -793,6 +796,20 @@ export function PermissionsPanel({
 
   return (
     <div className="space-y-6">
+      {/* Account ID & Change Password Feature */}
+      <AccountSecurityCard
+        currentEmail={currentEmail}
+        existingAdminEmails={permissions.adminEmails}
+        onWhitelistEmail={async (newEmail) => {
+          const nextList = Array.from(
+            new Set([...permissions.adminEmails, newEmail.toLowerCase()])
+          );
+          setEmailsText(nextList.join("\n"));
+          await onSavePermissions(nextList);
+        }}
+        onAuditRecorded={onAuditRecorded}
+      />
+
       <div className="bg-white border border-[#304B38]/12 rounded-[22px] p-6 sm:p-8 shadow-xs space-y-5">
         <div className="flex items-center gap-3 pb-4 border-b border-[#304B38]/10">
           <div className="w-10 h-10 rounded-xl bg-[#294D3A]/10 flex items-center justify-center">

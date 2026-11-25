@@ -2,9 +2,14 @@
 
 import React, { useEffect, useState, useCallback } from "react";
 import { db, ref, get, child, auth, remove } from "@/lib/firebase";
-import { signInWithEmailAndPassword, onAuthStateChanged, signOut } from "firebase/auth";
+import {
+  signInWithEmailAndPassword,
+  onAuthStateChanged,
+  signOut,
+  sendPasswordResetEmail,
+} from "firebase/auth";
 import Link from "next/link";
-import { Menu, Users, ChevronLeft } from "lucide-react";
+import { Menu, Users, ChevronLeft, Eye, EyeOff, KeyRound } from "lucide-react";
 import * as XLSX from "xlsx";
 
 import { EventDatesConfig, DEFAULT_EVENT_DATES, saveEventDatesToDb } from "@/lib/event-dates";
@@ -78,6 +83,9 @@ export default function AdminPage() {
   const [password, setPassword] = useState("");
   const [authError, setAuthError] = useState("");
   const [isCheckingAccess, setIsCheckingAccess] = useState(false);
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [forgotMode, setForgotMode] = useState(false);
+  const [resetNotice, setResetNotice] = useState("");
 
   // ── Navigation & Layout State ──────────────────────────────────────────────
   const [activeNav, setActiveNav] = useState<AdminNavKey>("dashboard");
@@ -232,10 +240,27 @@ export default function AdminPage() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError("");
+    setResetNotice("");
     try {
       await signInWithEmailAndPassword(auth, email, password);
     } catch {
       setAuthError("Invalid admin credentials");
+    }
+  };
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError("");
+    setResetNotice("");
+    if (!email.trim()) {
+      setAuthError("Please enter your admin email address first.");
+      return;
+    }
+    try {
+      await sendPasswordResetEmail(auth, email.trim());
+      setResetNotice(`Password reset link sent to ${email.trim()}. Check your inbox.`);
+    } catch {
+      setAuthError("Unable to send reset link. Verify the email address is registered.");
     }
   };
 
@@ -525,20 +550,30 @@ export default function AdminPage() {
     return (
       <main className="min-h-screen bg-[#FAF8F5] flex items-center justify-center p-6">
         <form
-          onSubmit={handleLogin}
+          onSubmit={forgotMode ? handleForgotPassword : handleLogin}
           className="bg-white p-8 rounded-2xl shadow-sm border border-[#304B38]/15 w-full max-w-sm text-center"
         >
           <div className="w-12 h-12 bg-[#294D3A]/10 rounded-full flex items-center justify-center mx-auto mb-4">
             <Users className="w-6 h-6 text-[#294D3A]" />
           </div>
-          <h1 className="text-xl font-serif font-bold text-[#171717] mb-1">Jawai Runners CMS</h1>
+          <h1 className="text-xl font-serif font-bold text-[#171717] mb-1">
+            {forgotMode ? "Reset Admin Password" : "Jawai Runners CMS"}
+          </h1>
           <p className="text-sm text-[#595959] mb-6">
-            Sign in with your administrator Firebase account.
+            {forgotMode
+              ? "Enter your administrator email to receive a password reset link."
+              : "Sign in with your administrator Firebase account."}
           </p>
 
           {authError && (
             <div className="mb-4 p-2.5 rounded-lg bg-red-50 text-xs font-bold text-red-600">
               {authError}
+            </div>
+          )}
+
+          {resetNotice && (
+            <div className="mb-4 p-2.5 rounded-lg bg-emerald-50 text-xs font-bold text-emerald-700">
+              {resetNotice}
             </div>
           )}
 
@@ -550,25 +585,55 @@ export default function AdminPage() {
             required
             className="w-full text-center mb-4 bg-transparent border-b border-[#294D3A]/25 py-2.5 text-[#171717] outline-none focus:border-[#294D3A]"
           />
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Password"
-            required
-            className="w-full text-center tracking-[0.2em] mb-6 bg-transparent border-b border-[#294D3A]/25 py-2.5 text-[#171717] outline-none focus:border-[#294D3A]"
-          />
+
+          {!forgotMode && (
+            <div className="relative mb-6">
+              <input
+                type={showLoginPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Password"
+                required
+                className="w-full text-center tracking-[0.2em] bg-transparent border-b border-[#294D3A]/25 py-2.5 px-8 text-[#171717] outline-none focus:border-[#294D3A]"
+              />
+              <button
+                type="button"
+                onClick={() => setShowLoginPassword((v) => !v)}
+                className="absolute right-1 top-1/2 -translate-y-1/2 text-[#595959] hover:text-[#171717] p-1"
+                aria-label="Toggle password visibility"
+              >
+                {showLoginPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+          )}
+
           <button
             type="submit"
             disabled={isCheckingAccess}
             className="w-full h-12 bg-[#294D3A] text-white font-bold tracking-widest text-xs rounded-xl hover:bg-[#1C3628] transition-colors disabled:opacity-50"
           >
-            {isCheckingAccess ? "VERIFYING..." : "ENTER CMS STUDIO"}
+            {forgotMode
+              ? "SEND RESET LINK"
+              : isCheckingAccess
+              ? "VERIFYING..."
+              : "ENTER CMS STUDIO"}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setForgotMode((v) => !v);
+              setAuthError("");
+              setResetNotice("");
+            }}
+            className="mt-4 block mx-auto text-xs font-semibold text-[#8C6A43] hover:text-[#171717] transition-colors"
+          >
+            {forgotMode ? "Back to Sign In" : "Forgot Password?"}
           </button>
 
           <Link
             href="/"
-            className="mt-5 inline-flex items-center gap-1 text-xs font-medium text-[#595959] hover:text-[#171717]"
+            className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-[#595959] hover:text-[#171717]"
           >
             <ChevronLeft className="w-3.5 h-3.5" /> Back to Public Site
           </Link>
@@ -732,6 +797,16 @@ export default function AdminPage() {
           </div>
 
           <div className="flex items-center gap-2.5 text-xs">
+            <button
+              type="button"
+              onClick={() => setActiveNav("permissions")}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white hover:bg-[#EFECE3] border border-[#304B38]/15 text-[#1F3026] font-bold text-[11px] tracking-wider uppercase transition-colors"
+              title="Change Admin Password or ID"
+            >
+              <KeyRound className="w-3.5 h-3.5 text-[#C69A3A]" />
+              <span className="hidden sm:inline">Change Password</span>
+            </button>
+
             <span
               className={`hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full font-mono text-[10.5px] font-bold uppercase ${
                 firestoreAvailable
@@ -869,6 +944,7 @@ export default function AdminPage() {
               isSeeding={isSeeding}
               onSeedAll={handleSeedAllCms}
               onExportBackupJson={handleExportBackupJson}
+              onAuditRecorded={async () => setAuditLogs(await fetchAuditLogs())}
               onSavePermissions={async (emails) => {
                 const saved = await savePermissionsSettings(emails, adminEmail);
                 setPermissionsSettings(saved);
