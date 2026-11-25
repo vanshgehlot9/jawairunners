@@ -7,6 +7,8 @@ import { Check, Sparkles, Droplets, TreePine, ShieldCheck, Download, Award, Arro
 import { db, ref, push, set } from "@/lib/firebase";
 import { useReactToPrint } from "react-to-print";
 import { useEventDates, EventDatesConfig } from "@/lib/event-dates";
+import { useCmsSection } from "@/lib/cms/use-cms";
+import type { ThreeRunSummaryItem } from "@/lib/cms/types";
 
 type ParticipantData = {
   fullName: string;
@@ -18,44 +20,37 @@ type ParticipantData = {
   paymentScreenshotUrl?: string;
 };
 
-function getRunSeriesOptions(dates: EventDatesConfig) {
+function getRunSeriesOptions(
+  dates: EventDatesConfig,
+  runs: ThreeRunSummaryItem[],
+  trilogy: { title: string; subtitle: string; tag: string }
+) {
+  const dateMap: Record<string, string> = {
+    "run-1": dates.run1Date,
+    "run-2": dates.run2Date,
+    "run-3": dates.run3Date,
+  };
+  const series = runs
+    .filter((r) => r.visible !== false)
+    .map((r) => ({
+      id: r.id,
+      name: `${r.number.replace("0", "")} — ${r.name}`,
+      date: dateMap[r.id] || "REVEALING SOON",
+      subtitle: r.subtitle,
+      tag: r.tag,
+    }));
+
   return [
-    {
-      id: "run-1",
-      name: "RUN 1 — AWAKEN",
-      date: dates.run1Date,
-      subtitle: "Launch of 100,000 Native Plants Campaign",
-      tag: "INAUGRAL RUN"
-    },
-    {
-      id: "run-2",
-      name: "RUN 2 — RESTORE",
-      date: dates.run2Date,
-      subtitle: "Progress Update & Restoration Sites",
-      tag: "MID-SEASON"
-    },
-    {
-      id: "run-3",
-      name: "RUN 3 — CELEBRATE",
-      date: dates.run3Date,
-      subtitle: "Celebrating First Major Restoration Milestone",
-      tag: "FINALE GALA"
-    },
+    ...series,
     {
       id: "trilogy",
-      name: "ALL 3 RUNS — TRILOGY PASS",
+      name: trilogy.title,
       date: dates.trilogyDate,
-      subtitle: "Complete Conservation Series + Special Medallion",
-      tag: "RECOMMENDED"
-    }
+      subtitle: trilogy.subtitle,
+      tag: trilogy.tag,
+    },
   ];
 }
-
-const CATEGORIES = [
-  { id: "21k", distance: "21 KM", format: "GRANITE TRAIL HALF MARATHON", description: "Rugged granite canyons, sandy ravines & wildlife passes for endurance trail runners." },
-  { id: "10k", distance: "10 KM", format: "WILDERNESS CHALLENGE", description: "Scenic granite trail through active rewilding enclosures and stepwell corridors." },
-  { id: "5k", distance: "5 KM", format: "COMMUNITY & PLANTING RUN", description: "Family & eco-run with seed ball broadcasting along designated forest tracts." }
-];
 
 const InputField = ({ label, value, onChange, placeholder, error, type = "text", onFocus }: any) => {
   const [isFocused, setIsFocused] = useState(false);
@@ -187,9 +182,22 @@ export function Registration() {
   };
 
   const eventDates = useEventDates();
-  const runSeriesOptions = useMemo(() => getRunSeriesOptions(eventDates), [eventDates]);
+  const { content, isVisible } = useCmsSection("registrationContent");
+  const { content: threeRuns } = useCmsSection("threeRuns");
+
+  const runSeriesOptions = useMemo(
+    () =>
+      getRunSeriesOptions(eventDates, threeRuns.runs, {
+        title: content.trilogyTitle,
+        subtitle: content.trilogySubtitle,
+        tag: content.trilogyTag,
+      }),
+    [eventDates, threeRuns.runs, content.trilogyTitle, content.trilogySubtitle, content.trilogyTag]
+  );
   const selectedRunData = runSeriesOptions.find((r) => r.id === selectedRunSeries);
-  const selectedCatData = CATEGORIES.find((c) => c.id === selectedCategory);
+  const selectedCatData = content.categories.find((c) => c.id === selectedCategory);
+
+  if (!isVisible) return null;
 
   // Dynamic progress value
   let progress = 0.2;
@@ -215,41 +223,40 @@ export function Registration() {
           <div>
 
             <h2 className="text-[44px] sm:text-[60px] lg:text-[76px] font-medium leading-[0.92] text-white tracking-tight drop-shadow-md uppercase mb-6">
-              BECOME PART <br />
-              <span className="text-[#C69A3A] italic font-serif">OF THE STORY.</span>
+              {content.heading} <br />
+              <span className="text-[#C69A3A] italic font-serif">{content.highlightedHeading}</span>
             </h2>
 
             <p className="text-[16px] md:text-[18px] text-white/80 font-light leading-relaxed mb-8 max-w-[500px]">
-              Every registration directly funds the planting and nurturing of native saplings in Jawai, supporting stepwell revitalization by Stepwells Renovater Foundation.
+              {content.description}
             </p>
 
             {/* 3 Impact Guarantees */}
             <div className="space-y-4 mb-8">
-              <div className="flex items-center gap-3.5 p-3 rounded-xl bg-white/5 border border-white/10">
-                <TreePine className="w-5 h-5 text-[#C69A3A] flex-shrink-0" />
-                <span className="text-[13px] text-white/90 font-medium">
-                  <strong>100,000 Native Plants:</strong> A native tree planted & GPS-tagged in your name.
-                </span>
-              </div>
-
-              <div className="flex items-center gap-3.5 p-3 rounded-xl bg-white/5 border border-white/10">
-                <Droplets className="w-5 h-5 text-[#C69A3A] flex-shrink-0" />
-                <span className="text-[13px] text-white/90 font-medium">
-                  <strong>Zero Single-Use Plastic:</strong> Reusable bottle required. Free natural terracotta refills.
-                </span>
-              </div>
-
-              <div className="flex items-center gap-3.5 p-3 rounded-xl bg-white/5 border border-white/10">
-                <ShieldCheck className="w-5 h-5 text-[#C69A3A] flex-shrink-0" />
-                <span className="text-[13px] text-white/90 font-medium">
-                  <strong>Organised by:</strong> Stepwells Renovater Foundation Rajasthan.
-                </span>
-              </div>
+              {content.guarantees.map((g) => {
+                const Icon =
+                  g.iconType === "tree"
+                    ? TreePine
+                    : g.iconType === "droplet"
+                    ? Droplets
+                    : ShieldCheck;
+                return (
+                  <div
+                    key={g.id}
+                    className="flex items-center gap-3.5 p-3 rounded-xl bg-white/5 border border-white/10"
+                  >
+                    <Icon className="w-5 h-5 text-[#C69A3A] flex-shrink-0" />
+                    <span className="text-[13px] text-white/90 font-medium">
+                      <strong>{g.title}</strong> {g.description}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
           <div className="pt-6 border-t border-white/15 text-[11px] font-mono tracking-wider text-white/50">
-            JAWAI · RAJASTHAN · 25.08° N · 73.16° E
+            {content.coordinates}
           </div>
         </div>
 
@@ -337,7 +344,7 @@ export function Registration() {
                           ECO APPAREL
                         </label>
                         <p className="text-[13px] text-[#171A18]/80 bg-black/5 p-3 rounded-xl border border-black/10">
-                          We provide a jacket or t-shirt at this time depending on availability.
+                          {content.ecoApparelNote}
                         </p>
                       </div>
                     </div>
@@ -398,7 +405,7 @@ export function Registration() {
                           CHOOSE YOUR DISTANCE CATEGORY
                         </label>
                         <div className="grid grid-cols-1 gap-2.5">
-                          {CATEGORIES.map((cat) => (
+                          {content.categories.map((cat) => (
                             <button
                               key={cat.id}
                               type="button"
@@ -461,27 +468,27 @@ export function Registration() {
                     <div className="flex-1 space-y-6">
                       
                       <div className="bg-[#FAF8F5] p-5 rounded-xl border border-[#294D3A]/20">
-                        <h4 className="text-[12px] font-bold tracking-[0.15em] uppercase text-[#294D3A] mb-3">Please Donate Us</h4>
+                        <h4 className="text-[12px] font-bold tracking-[0.15em] uppercase text-[#294D3A] mb-3">{content.donationHeading}</h4>
                         <p className="text-[13px] text-[#171A18]/80 leading-relaxed mb-4">
-                          Support our conservation cause. Please make your donation to the official bank account below and attach the payment screenshot.
+                          {content.donationDescription}
                         </p>
                         
                         <div className="bg-white p-4 rounded-lg border border-[#171717]/10 space-y-2 text-[13px]">
                           <div className="flex justify-between">
                             <span className="text-[#171A18]/50 uppercase text-[10px] font-bold">Account Name</span>
-                            <span className="font-semibold text-[#171A18]">STEPWELLS RENOVATOR FOUNDATION</span>
+                            <span className="font-semibold text-[#171A18]">{content.bankDetails.accountName}</span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-[#171A18]/50 uppercase text-[10px] font-bold">Account Number</span>
-                            <span className="font-semibold text-[#171A18]">45598441621</span>
+                            <span className="font-semibold text-[#171A18]">{content.bankDetails.accountNumber}</span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-[#171A18]/50 uppercase text-[10px] font-bold">IFSC Code</span>
-                            <span className="font-semibold text-[#171A18]">SBIN0031201</span>
+                            <span className="font-semibold text-[#171A18]">{content.bankDetails.ifscCode}</span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-[#171A18]/50 uppercase text-[10px] font-bold">Bank</span>
-                            <span className="font-semibold text-[#171A18]">SBI JALORI GAYE JODHPUR</span>
+                            <span className="font-semibold text-[#171A18]">{content.bankDetails.bankName}</span>
                           </div>
                         </div>
                       </div>
@@ -573,7 +580,7 @@ export function Registration() {
                       {/* Green Runner Pledge Checklist */}
                       <div className="bg-[#294D3A]/5 border border-[#294D3A]/20 rounded-xl p-4.5">
                         <span className="text-[10px] font-bold tracking-[0.16em] text-[#294D3A] uppercase block mb-3">
-                          RUNNER&apos;S ENVIRONMENTAL PLEDGE
+                          {content.pledgeTitle}
                         </span>
 
                         <label className="flex items-start gap-3 cursor-pointer mb-3">
@@ -584,7 +591,7 @@ export function Registration() {
                             className="mt-0.5 rounded text-[#294D3A] focus:ring-[#294D3A]"
                           />
                           <span className="text-[12px] text-[#171717]/80 leading-snug">
-                            <strong>Zero Single-Use Plastic:</strong> I will bring my own reusable hydration bottle/pack. I understand no single-use cups or plastic will be provided or permitted on trail.
+                            <strong>{content.pledge1Title}</strong> {content.pledge1Description}
                           </span>
                         </label>
 
@@ -595,13 +602,13 @@ export function Registration() {
                             className="mt-0.5 rounded text-[#294D3A] focus:ring-[#294D3A]"
                           />
                           <span className="text-[12px] text-[#171717]/80 leading-snug">
-                            <strong>Leave No Waste & Support Restoration:</strong> I agree to respect the wildlife habitat, stay on trail, and support the 100,000 Native Plants campaign.
+                            <strong>{content.pledge2Title}</strong> {content.pledge2Description}
                           </span>
                         </label>
                       </div>
 
                       <p className="text-[11px] text-[#171717]/50 text-center font-light">
-                        Organised by Stepwells Renovater Foundation. 100% of proceeds fund indigenous saplings & stepwell water catchments.
+                        {content.pledgeFooterNote}
                       </p>
 
                     </div>
@@ -652,10 +659,10 @@ export function Registration() {
                     </div>
 
                     <h3 className="text-[28px] sm:text-[34px] font-bold text-[#171717] tracking-tight mb-1">
-                      YOU ARE IN THE RUN.
+                      {content.ecoPassTitle}
                     </h3>
                     <p className="text-[11px] font-bold tracking-[0.2em] text-[#8C6A43] uppercase mb-6">
-                      RUN TO SAVE JAWAI · ECO-PASS ISSUED
+                      {content.ecoPassSubtitle}
                     </p>
 
                     {/* Digital Eco-Bib Pass */}

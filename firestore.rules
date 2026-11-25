@@ -1,0 +1,52 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function permissionsDocExists() {
+      return exists(/databases/$(database)/documents/cms_settings/permissions);
+    }
+
+    function isAuthorizedAdmin() {
+      return isSignedIn() && (
+        request.auth.token.admin == true ||
+        !permissionsDocExists() ||
+        request.auth.token.email in get(/databases/$(database)/documents/cms_settings/permissions).data.adminEmails
+      );
+    }
+
+    // Structured Website Sections:
+    // Public visitors can only read published sections.
+    // Draft fields are only read/edited by authorized admins.
+    match /cms_sections/{sectionId} {
+      allow read: if resource.data.isPublished == true || isAuthorizedAdmin();
+      allow create, update, delete: if isAuthorizedAdmin();
+    }
+
+    // Media Library metadata:
+    // Public read allowed for active assets; write restricted to admins.
+    match /cms_media/{mediaId} {
+      allow read: if true;
+      allow create, update, delete: if isAuthorizedAdmin();
+    }
+
+    // Public Website Settings (SEO, Navbar):
+    match /cms_settings/website {
+      allow read: if true;
+      allow create, update, delete: if isAuthorizedAdmin();
+    }
+
+    // Admin Permissions & Audit Logs: strictly admin-only
+    match /cms_settings/permissions {
+      allow read, write: if isAuthorizedAdmin();
+    }
+
+    match /cms_audit/{logId} {
+      allow read, write: if isAuthorizedAdmin();
+    }
+  }
+}

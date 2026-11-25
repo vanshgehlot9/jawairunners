@@ -1,152 +1,240 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { db, ref, get, child, auth, remove } from "@/lib/firebase";
 import { signInWithEmailAndPassword, onAuthStateChanged, signOut } from "firebase/auth";
 import Link from "next/link";
-import { 
-  ChevronLeft, 
-  Download, 
-  Users, 
-  Trash2, 
-  Calendar, 
-  Save, 
-  RotateCcw, 
-  CheckCircle2, 
-  Clock,
-  Sparkles
-} from "lucide-react";
+import { Menu, Users, ChevronLeft } from "lucide-react";
 import * as XLSX from "xlsx";
-import { 
-  EventDatesConfig, 
-  DEFAULT_EVENT_DATES, 
-  saveEventDatesToDb 
-} from "@/lib/event-dates";
 
-type RegistrationData = {
-  id: string;
-  fullName: string;
-  email: string;
-  phone: string;
-  city: string;
-  runSeries: string;
-  category: string;
-  paymentScreenshotUrl?: string;
-  hasPledgedZeroPlastic: boolean;
-  createdAt: string;
-};
+import { EventDatesConfig, DEFAULT_EVENT_DATES, saveEventDatesToDb } from "@/lib/event-dates";
+import {
+  AuditLogEntry,
+  CmsSectionEnvelope,
+  MediaAsset,
+  PermissionsSettingsData,
+  SectionContentMap,
+  SectionId,
+  WebsiteSettingsData,
+} from "@/lib/cms/types";
+import {
+  DEFAULT_WEBSITE_SETTINGS,
+  INITIAL_MEDIA_SEED,
+  INITIAL_SECTION_DATA,
+  SECTION_META,
+  createSeedEnvelope,
+} from "@/lib/cms/seed-data";
+import {
+  fetchAllSectionsAdmin,
+  fetchAuditLogs,
+  fetchMediaLibrary,
+  fetchPermissionsSettings,
+  fetchWebsiteSettingsAdmin,
+  publishSection,
+  savePermissionsSettings,
+  saveSectionDraft,
+  saveWebsiteSettings,
+  seedAllCmsToFirestore,
+  unpublishSection,
+} from "@/lib/cms/firestore-service";
+
+import { AdminSidebar, AdminNavKey } from "@/components/admin/AdminSidebar";
+import { CmsEditorShell, getPreviewUrl } from "@/components/admin/CmsEditorShell";
+import { MediaLibraryPanel } from "@/components/admin/MediaLibraryPanel";
+import { InstagramGalleryPanel } from "@/components/admin/InstagramGalleryPanel";
+import {
+  HeroEditor,
+  ConservationMissionEditor,
+  FirstInitiativeEditor,
+  MovementEditor,
+} from "@/components/admin/SectionEditorsPart1";
+import {
+  ThreeRunsEditor,
+  RunDetailsEditor,
+  FoundationEditor,
+  InitiativesEditor,
+  RegistrationContentEditor,
+  FaqEditor,
+  FooterEditor,
+} from "@/components/admin/SectionEditorsPart2";
+import {
+  DashboardOverview,
+  EventDatesPanel,
+  RegistrationsPanel,
+  WebsiteSettingsPanel,
+  PermissionsPanel,
+  RegistrationData,
+} from "@/components/admin/SystemAndEventPanels";
+
+function isSectionKey(key: AdminNavKey): key is SectionId {
+  return key in SECTION_META;
+}
 
 export default function AdminPage() {
-  const [registrations, setRegistrations] = useState<RegistrationData[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  // ── Auth State ─────────────────────────────────────────────────────────────
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [adminEmail, setAdminEmail] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [authError, setAuthError] = useState("");
+  const [isCheckingAccess, setIsCheckingAccess] = useState(false);
+
+  // ── Navigation & Layout State ──────────────────────────────────────────────
+  const [activeNav, setActiveNav] = useState<AdminNavKey>("dashboard");
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+
+  // ── Existing RTDB Data (Registrations & Event Dates) ───────────────────────
+  const [registrations, setRegistrations] = useState<RegistrationData[]>([]);
+  const [isLoadingRegistrations, setIsLoadingRegistrations] = useState(true);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-
-  // Active admin section tab
-  const [activeTab, setActiveTab] = useState<"dates" | "registrations">("dates");
-
-  // Event Dates Form State
   const [eventDates, setEventDates] = useState<EventDatesConfig>(DEFAULT_EVENT_DATES);
   const [isSavingDates, setIsSavingDates] = useState(false);
   const [datesSaveSuccess, setDatesSaveSuccess] = useState(false);
   const [datesSaveError, setDatesSaveError] = useState("");
 
-  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.checked) {
-      setSelectedIds(registrations.map(r => r.id));
-    } else {
-      setSelectedIds([]);
-    }
-  };
+  // ── Firestore CMS State ────────────────────────────────────────────────────
+  const [sectionsMap, setSectionsMap] = useState<
+    Record<SectionId, CmsSectionEnvelope<SectionContentMap[SectionId]>>
+  >(() => {
+    const init = {} as Record<SectionId, CmsSectionEnvelope<SectionContentMap[SectionId]>>;
+    (Object.keys(SECTION_META) as SectionId[]).forEach((id) => {
+      init[id] = createSeedEnvelope(id, "not-seeded-yet");
+    });
+    return init;
+  });
+  const [draftEdits, setDraftEdits] = useState<Partial<SectionContentMap>>({});
+  const [firestoreAvailable, setFirestoreAvailable] = useState(true);
+  const [permissionError, setPermissionError] = useState<string | undefined>();
+  const [mediaAssets, setMediaAssets] = useState<MediaAsset[]>(INITIAL_MEDIA_SEED);
+  const [websiteSettings, setWebsiteSettings] =
+    useState<WebsiteSettingsData>(DEFAULT_WEBSITE_SETTINGS);
+  const [permissionsSettings, setPermissionsSettings] = useState<PermissionsSettingsData>({
+    adminEmails: [],
+    updatedAt: "",
+    updatedBy: "",
+  });
+  const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
 
-  const handleSelectOne = (id: string) => {
-    setSelectedIds(prev => 
-      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
-    );
-  };
+  const [isCmsBusy, setIsCmsBusy] = useState(false);
+  const [isSeeding, setIsSeeding] = useState(false);
+  const [editorStatusMsg, setEditorStatusMsg] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
 
-  const handleDeleteSelected = async () => {
-    if (!window.confirm(`Are you sure you want to delete ${selectedIds.length} registration(s)?`)) return;
-    
-    setIsLoading(true);
-    try {
-      const dbRef = ref(db);
-      const deletePromises = selectedIds.map(id => remove(child(dbRef, `registrations/${id}`)));
-      await Promise.all(deletePromises);
-      
-      setRegistrations(prev => prev.filter(r => !selectedIds.includes(r.id)));
-      setSelectedIds([]);
-    } catch (error) {
-      console.error("Error deleting:", error);
-      alert("Failed to delete records.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleExportCSV = () => {
-    if (registrations.length === 0) return;
-    
-    const headers = ['Runner Name', 'Email', 'Phone', 'City', 'Event', 'Category', 'Payment URL', 'Registered On'];
-    const rows = registrations.map(reg => [
-      `"${reg.fullName}"`,
-      `"${reg.email}"`,
-      `"${reg.phone}"`,
-      `"${reg.city}"`,
-      `"${reg.runSeries}"`,
-      `"${reg.category}"`,
-      `"${reg.paymentScreenshotUrl || ''}"`,
-      `"${new Date(reg.createdAt).toISOString()}"`
-    ]);
-    
-    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `Jawai_Runners_Export_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  const handleExportExcel = () => {
-    if (registrations.length === 0) return;
-    
-    const data = registrations.map(reg => ({
-      "Runner Name": reg.fullName,
-      "Email": reg.email,
-      "Phone": reg.phone,
-      "City": reg.city,
-      "Event": reg.runSeries,
-      "Category": reg.category,
-      "Payment URL": reg.paymentScreenshotUrl || '',
-      "Registered On": new Date(reg.createdAt).toLocaleString()
-    }));
-    
-    const worksheet = XLSX.utils.json_to_sheet(data);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Registrations");
-    XLSX.writeFile(workbook, `Jawai_Runners_Export_${new Date().toISOString().split('T')[0]}.xlsx`);
-  };
-
+  // ── Firebase Auth Listener ─────────────────────────────────────────────────
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setIsAuthenticated(!!user);
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        setIsAuthenticated(false);
+        setAdminEmail("");
+        return;
+      }
+
+      const userEmail = (user.email || "").toLowerCase();
+      setIsCheckingAccess(true);
+      try {
+        const perm = await fetchPermissionsSettings(userEmail);
+        setPermissionsSettings(perm);
+
+        // Enforce whitelist if adminEmails is explicitly populated
+        if (perm.adminEmails.length > 0 && !perm.adminEmails.includes(userEmail)) {
+          await signOut(auth);
+          setIsAuthenticated(false);
+          setAuthError("This account is not in the authorized CMS administrators list.");
+          return;
+        }
+        setAdminEmail(user.email || "");
+        setIsAuthenticated(true);
+      } finally {
+        setIsCheckingAccess(false);
+      }
     });
     return () => unsubscribe();
   }, []);
 
+  const refreshCmsSections = useCallback(async () => {
+    const res = await fetchAllSectionsAdmin();
+    setSectionsMap(res.sections);
+    setFirestoreAvailable(res.firestoreAvailable);
+    setPermissionError(res.permissionError);
+  }, []);
+
+  const refreshMedia = useCallback(async () => {
+    const list = await fetchMediaLibrary();
+    setMediaAssets(list);
+  }, []);
+
+  // ── Load RTDB & Firestore Data When Authenticated ──────────────────────────
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const loadAll = async () => {
+      try {
+        const dbRef = ref(db);
+        // 1. RTDB Registrations (preserved)
+        const regSnapshot = await get(child(dbRef, "registrations"));
+        if (regSnapshot.exists()) {
+          const data = regSnapshot.val();
+          const parsedData = Object.keys(data).map((key) => ({
+            id: key,
+            ...data[key],
+          }));
+          parsedData.sort(
+            (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          );
+          setRegistrations(parsedData);
+        } else {
+          setRegistrations([]);
+        }
+
+        // 2. RTDB Event Dates (preserved)
+        const datesSnapshot = await get(child(dbRef, "settings/eventDates"));
+        if (datesSnapshot.exists()) {
+          const val = datesSnapshot.val();
+          setEventDates({
+            run1Date: val.run1Date?.trim() || DEFAULT_EVENT_DATES.run1Date,
+            run2Date: val.run2Date?.trim() || DEFAULT_EVENT_DATES.run2Date,
+            run3Date: val.run3Date?.trim() || DEFAULT_EVENT_DATES.run3Date,
+            trilogyDate: val.trilogyDate?.trim() || DEFAULT_EVENT_DATES.trilogyDate,
+            updatedAt: val.updatedAt,
+          });
+        }
+      } catch (err) {
+        console.error("Error fetching RTDB data:", err);
+      } finally {
+        setIsLoadingRegistrations(false);
+      }
+
+      // 3. Firestore CMS Data
+      await refreshCmsSections();
+      await refreshMedia();
+      const [ws, perms, logs] = await Promise.all([
+        fetchWebsiteSettingsAdmin(),
+        fetchPermissionsSettings(adminEmail),
+        fetchAuditLogs(),
+      ]);
+      setWebsiteSettings(ws);
+      setPermissionsSettings(perms);
+      setAuditLogs(logs);
+    };
+
+    loadAll();
+  }, [isAuthenticated, adminEmail, refreshCmsSections, refreshMedia]);
+
+  // Reset status message when changing active panel
+  useEffect(() => {
+    setEditorStatusMsg(null);
+  }, [activeNav]);
+
+  // ── Auth Handlers ──────────────────────────────────────────────────────────
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError("");
     try {
       await signInWithEmailAndPassword(auth, email, password);
-    } catch (error: any) {
-      console.error(error);
+    } catch {
       setAuthError("Invalid admin credentials");
     }
   };
@@ -159,50 +247,88 @@ export default function AdminPage() {
     }
   };
 
-  // Fetch registrations & event dates on auth
-  useEffect(() => {
-    if (!isAuthenticated) return;
+  // ── Registration Handlers (Preserved) ──────────────────────────────────────
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSelectedIds(e.target.checked ? registrations.map((r) => r.id) : []);
+  };
 
-    const fetchData = async () => {
-      try {
-        const dbRef = ref(db);
-        
-        // 1. Fetch Registrations
-        const regSnapshot = await get(child(dbRef, "registrations"));
-        if (regSnapshot.exists()) {
-          const data = regSnapshot.val();
-          const parsedData = Object.keys(data).map((key) => ({
-            id: key,
-            ...data[key]
-          }));
-          parsedData.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-          setRegistrations(parsedData);
-        } else {
-          setRegistrations([]);
-        }
+  const handleSelectOne = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
 
-        // 2. Fetch Event Dates
-        const datesSnapshot = await get(child(dbRef, "settings/eventDates"));
-        if (datesSnapshot.exists()) {
-          const val = datesSnapshot.val();
-          setEventDates({
-            run1Date: val.run1Date?.trim() || DEFAULT_EVENT_DATES.run1Date,
-            run2Date: val.run2Date?.trim() || DEFAULT_EVENT_DATES.run2Date,
-            run3Date: val.run3Date?.trim() || DEFAULT_EVENT_DATES.run3Date,
-            trilogyDate: val.trilogyDate?.trim() || DEFAULT_EVENT_DATES.trilogyDate,
-            updatedAt: val.updatedAt,
-          });
-        }
-      } catch (error) {
-        console.error("Error fetching admin data:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  const handleDeleteSelected = async () => {
+    if (!window.confirm(`Are you sure you want to delete ${selectedIds.length} registration(s)?`))
+      return;
+    setIsLoadingRegistrations(true);
+    try {
+      const dbRef = ref(db);
+      await Promise.all(selectedIds.map((id) => remove(child(dbRef, `registrations/${id}`))));
+      setRegistrations((prev) => prev.filter((r) => !selectedIds.includes(r.id)));
+      setSelectedIds([]);
+    } catch {
+      alert("Failed to delete records.");
+    } finally {
+      setIsLoadingRegistrations(false);
+    }
+  };
 
-    fetchData();
-  }, [isAuthenticated]);
+  const handleExportCSV = () => {
+    if (registrations.length === 0) return;
+    const headers = [
+      "Runner Name",
+      "Email",
+      "Phone",
+      "City",
+      "Event",
+      "Category",
+      "Payment URL",
+      "Registered On",
+    ];
+    const rows = registrations.map((reg) => [
+      `"${reg.fullName}"`,
+      `"${reg.email}"`,
+      `"${reg.phone}"`,
+      `"${reg.city}"`,
+      `"${reg.runSeries}"`,
+      `"${reg.category}"`,
+      `"${reg.paymentScreenshotUrl || ""}"`,
+      `"${new Date(reg.createdAt).toISOString()}"`,
+    ]);
+    const csvContent = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", `Jawai_Runners_Export_${new Date().toISOString().split("T")[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
+  const handleExportExcel = () => {
+    if (registrations.length === 0) return;
+    const data = registrations.map((reg) => ({
+      "Runner Name": reg.fullName,
+      Email: reg.email,
+      Phone: reg.phone,
+      City: reg.city,
+      Event: reg.runSeries,
+      Category: reg.category,
+      "Payment URL": reg.paymentScreenshotUrl || "",
+      "Registered On": new Date(reg.createdAt).toLocaleString(),
+    }));
+    const worksheet = XLSX.utils.json_to_sheet(data);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Registrations");
+    XLSX.writeFile(
+      workbook,
+      `Jawai_Runners_Export_${new Date().toISOString().split("T")[0]}.xlsx`
+    );
+  };
+
+  // ── Event Dates Handlers (Preserved) ───────────────────────────────────────
   const handleSaveDates = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSavingDates(true);
@@ -211,10 +337,9 @@ export default function AdminPage() {
     try {
       await saveEventDatesToDb(eventDates);
       setDatesSaveSuccess(true);
-      setEventDates(prev => ({ ...prev, updatedAt: new Date().toISOString() }));
+      setEventDates((prev) => ({ ...prev, updatedAt: new Date().toISOString() }));
       setTimeout(() => setDatesSaveSuccess(false), 4500);
-    } catch (err: any) {
-      console.error("Error saving event dates:", err);
+    } catch {
       setDatesSaveError("Failed to save changes to database. Please check connection.");
     } finally {
       setIsSavingDates(false);
@@ -225,458 +350,534 @@ export default function AdminPage() {
     setEventDates({ ...DEFAULT_EVENT_DATES });
   };
 
+  // ── Section Publishing Workflow Handlers ───────────────────────────────────
+  const getWorkingDraft = <K extends SectionId>(id: K): SectionContentMap[K] => {
+    return (draftEdits[id] ?? sectionsMap[id].draft) as SectionContentMap[K];
+  };
+
+  const setWorkingDraft = <K extends SectionId>(id: K, next: SectionContentMap[K]) => {
+    setDraftEdits((prev) => ({ ...prev, [id]: next }));
+  };
+
+  const clearDirty = (id: SectionId) => {
+    setDraftEdits((prev) => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+  };
+
+  const handleSaveDraftSection = async <K extends SectionId>(id: K) => {
+    setIsCmsBusy(true);
+    setEditorStatusMsg(null);
+    try {
+      const updated = await saveSectionDraft(id, getWorkingDraft(id), {
+        actorEmail: adminEmail,
+        existingEnvelope: sectionsMap[id] as CmsSectionEnvelope<SectionContentMap[K]>,
+      });
+      setSectionsMap((prev) => ({ ...prev, [id]: updated }));
+      clearDirty(id);
+      setAuditLogs(await fetchAuditLogs());
+      setEditorStatusMsg({
+        type: "success",
+        text: "Draft saved to Firestore. Click Publish when ready to go live.",
+      });
+    } catch (err: unknown) {
+      setEditorStatusMsg({
+        type: "error",
+        text:
+          err instanceof Error
+            ? err.message
+            : "Failed saving draft. Ensure Firestore rules are deployed.",
+      });
+    } finally {
+      setIsCmsBusy(false);
+    }
+  };
+
+  const handlePreviewSection = async <K extends SectionId>(id: K) => {
+    await handleSaveDraftSection(id);
+    window.open(getPreviewUrl(id), "_blank");
+  };
+
+  const handlePublishSection = async <K extends SectionId>(id: K) => {
+    setIsCmsBusy(true);
+    setEditorStatusMsg(null);
+    try {
+      const updated = await publishSection(id, getWorkingDraft(id), {
+        actorEmail: adminEmail,
+        existingEnvelope: sectionsMap[id] as CmsSectionEnvelope<SectionContentMap[K]>,
+      });
+      setSectionsMap((prev) => ({ ...prev, [id]: updated }));
+      clearDirty(id);
+      setAuditLogs(await fetchAuditLogs());
+      setEditorStatusMsg({
+        type: "success",
+        text: "Published live! Public visitors will now see these updates immediately.",
+      });
+    } catch (err: unknown) {
+      setEditorStatusMsg({
+        type: "error",
+        text:
+          err instanceof Error
+            ? err.message
+            : "Failed to publish. Ensure Firestore rules allow admin writes.",
+      });
+    } finally {
+      setIsCmsBusy(false);
+    }
+  };
+
+  const handleUnpublishSection = async <K extends SectionId>(id: K) => {
+    setIsCmsBusy(true);
+    setEditorStatusMsg(null);
+    try {
+      await unpublishSection(id, adminEmail);
+      setSectionsMap((prev) => ({
+        ...prev,
+        [id]: { ...prev[id], isPublished: false, updatedAt: new Date().toISOString() },
+      }));
+      setAuditLogs(await fetchAuditLogs());
+      setEditorStatusMsg({
+        type: "success",
+        text: "Section unpublished and hidden from public website.",
+      });
+    } catch (err: unknown) {
+      setEditorStatusMsg({
+        type: "error",
+        text: err instanceof Error ? err.message : "Failed to unpublish section.",
+      });
+    } finally {
+      setIsCmsBusy(false);
+    }
+  };
+
+  const handleToggleVisibility = async <K extends SectionId>(id: K, visible: boolean) => {
+    setSectionsMap((prev) => ({
+      ...prev,
+      [id]: { ...prev[id], isVisible: visible },
+    }));
+    try {
+      await saveSectionDraft(id, getWorkingDraft(id), {
+        isVisible: visible,
+        actorEmail: adminEmail,
+        existingEnvelope: {
+          ...(sectionsMap[id] as CmsSectionEnvelope<SectionContentMap[K]>),
+          isVisible: visible,
+        },
+      });
+    } catch {
+      // handled visually
+    }
+  };
+
+  const handleResetSectionDefault = async <K extends SectionId>(id: K) => {
+    const seed = INITIAL_SECTION_DATA[id];
+    setWorkingDraft(id, seed);
+    setEditorStatusMsg({
+      type: "success",
+      text: "Default seed content loaded into editor draft. Save Draft or Publish to persist.",
+    });
+  };
+
+  // ── Seed All CMS Content ───────────────────────────────────────────────────
+  const handleSeedAllCms = async (overwrite: boolean) => {
+    setIsSeeding(true);
+    try {
+      const { seededSections, seededMedia } = await seedAllCmsToFirestore(adminEmail, overwrite);
+      await refreshCmsSections();
+      await refreshMedia();
+      setAuditLogs(await fetchAuditLogs());
+      alert(
+        `Firestore seeding complete: ${seededSections} section(s) and ${seededMedia} media asset(s) seeded.`
+      );
+    } catch (err: unknown) {
+      alert(
+        err instanceof Error
+          ? `Seeding failed: ${err.message}. Check Admin & Permissions -> Security Rules.`
+          : "Seeding failed."
+      );
+    } finally {
+      setIsSeeding(false);
+    }
+  };
+
+  const handleExportBackupJson = () => {
+    const payload = {
+      exportedAt: new Date().toISOString(),
+      websiteSettings,
+      eventDates,
+      sections: sectionsMap,
+      media: mediaAssets,
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `Jawai_Runners_CMS_Backup_${new Date().toISOString().split("T")[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
+  // ── Login Gate ─────────────────────────────────────────────────────────────
   if (!isAuthenticated) {
     return (
-      <main className="min-h-screen bg-[#FDFBF7] flex items-center justify-center p-6">
-        <form onSubmit={handleLogin} className="bg-white p-8 rounded-2xl shadow-sm border border-[#171717]/10 w-full max-w-sm text-center">
+      <main className="min-h-screen bg-[#FAF8F5] flex items-center justify-center p-6">
+        <form
+          onSubmit={handleLogin}
+          className="bg-white p-8 rounded-2xl shadow-sm border border-[#304B38]/15 w-full max-w-sm text-center"
+        >
           <div className="w-12 h-12 bg-[#294D3A]/10 rounded-full flex items-center justify-center mx-auto mb-4">
             <Users className="w-6 h-6 text-[#294D3A]" />
           </div>
-          <h1 className="text-xl font-serif font-bold text-[#171717] mb-2">Admin Access</h1>
-          <p className="text-sm text-[#595959] mb-6">Sign in with your administrator account.</p>
-          
+          <h1 className="text-xl font-serif font-bold text-[#171717] mb-1">Jawai Runners CMS</h1>
+          <p className="text-sm text-[#595959] mb-6">
+            Sign in with your administrator Firebase account.
+          </p>
+
           {authError && (
-            <div className="mb-4 text-xs font-bold text-red-500 uppercase tracking-widest">{authError}</div>
+            <div className="mb-4 p-2.5 rounded-lg bg-red-50 text-xs font-bold text-red-600">
+              {authError}
+            </div>
           )}
 
-          <input 
-            type="email" 
+          <input
+            type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="Admin Email"
+            required
             className="w-full text-center mb-4 bg-transparent border-b border-[#294D3A]/25 py-2.5 text-[#171717] outline-none focus:border-[#294D3A]"
           />
-          <input 
-            type="password" 
+          <input
+            type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Password"
+            required
             className="w-full text-center tracking-[0.2em] mb-6 bg-transparent border-b border-[#294D3A]/25 py-2.5 text-[#171717] outline-none focus:border-[#294D3A]"
           />
-          <button type="submit" className="w-full h-12 bg-[#294D3A] text-white font-bold tracking-widest text-xs rounded-xl hover:bg-[#1C3628] transition-colors">
-            ENTER
+          <button
+            type="submit"
+            disabled={isCheckingAccess}
+            className="w-full h-12 bg-[#294D3A] text-white font-bold tracking-widest text-xs rounded-xl hover:bg-[#1C3628] transition-colors disabled:opacity-50"
+          >
+            {isCheckingAccess ? "VERIFYING..." : "ENTER CMS STUDIO"}
           </button>
+
+          <Link
+            href="/"
+            className="mt-5 inline-flex items-center gap-1 text-xs font-medium text-[#595959] hover:text-[#171717]"
+          >
+            <ChevronLeft className="w-3.5 h-3.5" /> Back to Public Site
+          </Link>
         </form>
       </main>
     );
   }
 
+  // ── Render Active Section Editor ───────────────────────────────────────────
+  const renderSectionEditor = (id: SectionId) => {
+    const commonMedia = {
+      mediaAssets,
+      onMediaUploaded: (asset: MediaAsset) => setMediaAssets((prev) => [asset, ...prev]),
+      actorEmail: adminEmail,
+    };
+
+    switch (id) {
+      case "hero":
+        return (
+          <HeroEditor
+            value={getWorkingDraft("hero")}
+            onChange={(next) => setWorkingDraft("hero", next)}
+            {...commonMedia}
+          />
+        );
+      case "conservationMission":
+        return (
+          <ConservationMissionEditor
+            value={getWorkingDraft("conservationMission")}
+            onChange={(next) => setWorkingDraft("conservationMission", next)}
+            {...commonMedia}
+          />
+        );
+      case "firstInitiative":
+        return (
+          <FirstInitiativeEditor
+            value={getWorkingDraft("firstInitiative")}
+            onChange={(next) => setWorkingDraft("firstInitiative", next)}
+            {...commonMedia}
+          />
+        );
+      case "movement":
+        return (
+          <MovementEditor
+            value={getWorkingDraft("movement")}
+            onChange={(next) => setWorkingDraft("movement", next)}
+            {...commonMedia}
+          />
+        );
+      case "threeRuns":
+        return (
+          <ThreeRunsEditor
+            value={getWorkingDraft("threeRuns")}
+            onChange={(next) => setWorkingDraft("threeRuns", next)}
+            eventDates={eventDates}
+            {...commonMedia}
+          />
+        );
+      case "runDetails":
+        return (
+          <RunDetailsEditor
+            value={getWorkingDraft("runDetails")}
+            onChange={(next) => setWorkingDraft("runDetails", next)}
+            {...commonMedia}
+          />
+        );
+      case "foundation":
+        return (
+          <FoundationEditor
+            value={getWorkingDraft("foundation")}
+            onChange={(next) => setWorkingDraft("foundation", next)}
+            {...commonMedia}
+          />
+        );
+      case "initiatives":
+        return (
+          <InitiativesEditor
+            value={getWorkingDraft("initiatives")}
+            onChange={(next) => setWorkingDraft("initiatives", next)}
+            {...commonMedia}
+          />
+        );
+      case "registrationContent":
+        return (
+          <RegistrationContentEditor
+            value={getWorkingDraft("registrationContent")}
+            onChange={(next) => setWorkingDraft("registrationContent", next)}
+            {...commonMedia}
+          />
+        );
+      case "faq":
+        return (
+          <FaqEditor
+            value={getWorkingDraft("faq")}
+            onChange={(next) => setWorkingDraft("faq", next)}
+            {...commonMedia}
+          />
+        );
+      case "footer":
+        return (
+          <FooterEditor
+            value={getWorkingDraft("footer")}
+            onChange={(next) => setWorkingDraft("footer", next)}
+            {...commonMedia}
+          />
+        );
+    }
+  };
+
   return (
-    <main className="min-h-screen bg-[#FDFBF7] text-[#171717] pb-24">
-      {/* Admin Navbar */}
-      <nav className="w-full bg-white border-b border-[#171717]/10 px-6 py-4 flex items-center justify-between sticky top-0 z-50 shadow-xs">
-        <div className="flex items-center gap-6">
-          <Link 
-            href="/"
-            className="inline-flex items-center gap-2 text-[#595959] hover:text-[#171717] transition-colors font-medium text-sm"
-          >
-            <ChevronLeft className="w-4 h-4" />
-            Back to Site
-          </Link>
-          <div className="h-6 w-px bg-[#171717]/10" />
-          <h1 className="font-bold text-[14px] tracking-[0.1em] text-[#294D3A] uppercase">
-            Jawai Runners Admin
-          </h1>
-        </div>
-        <button 
-          onClick={handleLogout}
-          className="text-xs font-bold tracking-[0.1em] text-[#595959] hover:text-[#171717] uppercase transition-colors"
-        >
-          Sign Out
-        </button>
-      </nav>
+    <div className="min-h-screen bg-[#FAF8F5] text-[#171717] flex">
+      {/* Left Persistent Sidebar */}
+      <AdminSidebar
+        activeKey={activeNav}
+        onSelect={setActiveNav}
+        isCollapsed={isSidebarCollapsed}
+        onToggleCollapse={() => setIsSidebarCollapsed((v) => !v)}
+        isMobileOpen={isMobileNavOpen}
+        onCloseMobile={() => setIsMobileNavOpen(false)}
+        registrationsCount={registrations.length}
+        sectionsMap={sectionsMap}
+        adminEmail={adminEmail}
+        onLogout={handleLogout}
+      />
 
-      <div className="max-w-[1200px] mx-auto px-6 mt-10">
-        
-        {/* Navigation Tabs */}
-        <div className="flex items-center gap-3 border-b border-[#171717]/10 pb-4 mb-8">
-          <button
-            onClick={() => setActiveTab("dates")}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs tracking-wider uppercase transition-all ${
-              activeTab === "dates"
-                ? "bg-[#294D3A] text-white shadow-sm"
-                : "bg-white text-[#595959] border border-[#171717]/10 hover:text-[#171717]"
-            }`}
-          >
-            <Calendar className="w-4 h-4" />
-            <span>Event Dates Settings</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab("registrations")}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs tracking-wider uppercase transition-all ${
-              activeTab === "registrations"
-                ? "bg-[#294D3A] text-white shadow-sm"
-                : "bg-white text-[#595959] border border-[#171717]/10 hover:text-[#171717]"
-            }`}
-          >
-            <Users className="w-4 h-4" />
-            <span>Registrations ({registrations.length})</span>
-          </button>
-        </div>
-
-        {/* TAB 1: EVENT DATES SETTINGS */}
-        {activeTab === "dates" && (
-          <div className="bg-white border border-[#171717]/10 rounded-[24px] p-6 sm:p-10 shadow-sm mb-12">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 pb-6 border-b border-[#171717]/10">
-              <div>
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#C69A3A]/10 text-[#8C6A43] text-[11px] font-bold tracking-wider uppercase mb-2">
-                  <Sparkles className="w-3.5 h-3.5 text-[#C69A3A]" />
-                  Live Event Schedule Control
-                </div>
-                <h2 className="text-2xl sm:text-3xl font-serif font-bold text-[#171717]">
-                  Event Dates Management
-                </h2>
-                <p className="text-sm text-[#595959] mt-1 max-w-2xl">
-                  Easily update the live run dates across the entire website (Run Selector, Detail Panel, Registration Form, Footer, and FAQ) without writing any code.
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={handleResetToRevealingSoon}
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[#171717]/20 hover:bg-[#FAF8F5] text-xs font-bold tracking-wider uppercase text-[#171717] transition-colors self-start md:self-auto shrink-0"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-                Reset to &quot;REVEALING SOON&quot;
-              </button>
-            </div>
-
-            {/* Notification alert on save */}
-            {datesSaveSuccess && (
-              <div className="mb-6 p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 flex items-center gap-3 text-sm font-medium">
-                <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
-                <div>
-                  <strong>Live Dates Updated!</strong> All event dates across the website have been synchronized in real-time.
-                </div>
-              </div>
-            )}
-
-            {datesSaveError && (
-              <div className="mb-6 p-4 rounded-xl bg-red-50 border border-red-200 text-red-800 text-sm font-medium">
-                {datesSaveError}
-              </div>
-            )}
-
-            <form onSubmit={handleSaveDates} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                
-                {/* Run 1 Date */}
-                <div className="p-5 rounded-2xl bg-[#FAF8F5] border border-[#171717]/10 flex flex-col justify-between">
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-[11px] font-bold tracking-wider text-[#C69A3A] uppercase">
-                        RUN 01 · AWAKEN
-                      </span>
-                      <span className="text-[10px] font-mono text-[#595959] uppercase">The Dawn Run</span>
-                    </div>
-                    <label className="block text-sm font-bold text-[#171717] mb-1">
-                      Run 1 Event Date
-                    </label>
-                    <p className="text-xs text-[#595959] mb-3">
-                      Shown on Run 1 card, detail panel &amp; registration dropdown.
-                    </p>
-                  </div>
-                  <div>
-                    <input
-                      type="text"
-                      value={eventDates.run1Date}
-                      onChange={(e) => setEventDates({ ...eventDates, run1Date: e.target.value })}
-                      placeholder="e.g. REVEALING SOON or 15 MARCH 2027"
-                      className="w-full h-12 bg-white border border-[#171717]/15 rounded-xl px-4 text-sm font-bold text-[#171717] focus:outline-none focus:border-[#294D3A] focus:ring-1 focus:ring-[#294D3A] transition-all"
-                    />
-                    <div className="flex gap-2 mt-2">
-                      <button
-                        type="button"
-                        onClick={() => setEventDates({ ...eventDates, run1Date: "REVEALING SOON" })}
-                        className="text-[10px] font-bold text-[#8C6A43] hover:underline uppercase"
-                      >
-                        + Set &quot;REVEALING SOON&quot;
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Run 2 Date */}
-                <div className="p-5 rounded-2xl bg-[#FAF8F5] border border-[#171717]/10 flex flex-col justify-between">
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-[11px] font-bold tracking-wider text-[#4A7C59] uppercase">
-                        RUN 02 · RESTORE
-                      </span>
-                      <span className="text-[10px] font-mono text-[#595959] uppercase">The Rewilding Run</span>
-                    </div>
-                    <label className="block text-sm font-bold text-[#171717] mb-1">
-                      Run 2 Event Date
-                    </label>
-                    <p className="text-xs text-[#595959] mb-3">
-                      Shown on Run 2 card, detail panel &amp; registration dropdown.
-                    </p>
-                  </div>
-                  <div>
-                    <input
-                      type="text"
-                      value={eventDates.run2Date}
-                      onChange={(e) => setEventDates({ ...eventDates, run2Date: e.target.value })}
-                      placeholder="e.g. REVEALING SOON or 28 MARCH 2027"
-                      className="w-full h-12 bg-white border border-[#171717]/15 rounded-xl px-4 text-sm font-bold text-[#171717] focus:outline-none focus:border-[#294D3A] focus:ring-1 focus:ring-[#294D3A] transition-all"
-                    />
-                    <div className="flex gap-2 mt-2">
-                      <button
-                        type="button"
-                        onClick={() => setEventDates({ ...eventDates, run2Date: "REVEALING SOON" })}
-                        className="text-[10px] font-bold text-[#8C6A43] hover:underline uppercase"
-                      >
-                        + Set &quot;REVEALING SOON&quot;
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Run 3 Date */}
-                <div className="p-5 rounded-2xl bg-[#FAF8F5] border border-[#171717]/10 flex flex-col justify-between">
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-[11px] font-bold tracking-wider text-[#8C6A43] uppercase">
-                        RUN 03 · CELEBRATE
-                      </span>
-                      <span className="text-[10px] font-mono text-[#595959] uppercase">The Triumph Run</span>
-                    </div>
-                    <label className="block text-sm font-bold text-[#171717] mb-1">
-                      Run 3 Event Date
-                    </label>
-                    <p className="text-xs text-[#595959] mb-3">
-                      Shown on Run 3 card, detail panel &amp; registration dropdown.
-                    </p>
-                  </div>
-                  <div>
-                    <input
-                      type="text"
-                      value={eventDates.run3Date}
-                      onChange={(e) => setEventDates({ ...eventDates, run3Date: e.target.value })}
-                      placeholder="e.g. REVEALING SOON or 12 APRIL 2027"
-                      className="w-full h-12 bg-white border border-[#171717]/15 rounded-xl px-4 text-sm font-bold text-[#171717] focus:outline-none focus:border-[#294D3A] focus:ring-1 focus:ring-[#294D3A] transition-all"
-                    />
-                    <div className="flex gap-2 mt-2">
-                      <button
-                        type="button"
-                        onClick={() => setEventDates({ ...eventDates, run3Date: "REVEALING SOON" })}
-                        className="text-[10px] font-bold text-[#8C6A43] hover:underline uppercase"
-                      >
-                        + Set &quot;REVEALING SOON&quot;
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Trilogy Pass Summary Date */}
-                <div className="p-5 rounded-2xl bg-[#FAF8F5] border border-[#171717]/10 flex flex-col justify-between">
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-[11px] font-bold tracking-wider text-[#294D3A] uppercase">
-                        TRILOGY PASS
-                      </span>
-                      <span className="text-[10px] font-mono text-[#595959] uppercase">All 3 Runs</span>
-                    </div>
-                    <label className="block text-sm font-bold text-[#171717] mb-1">
-                      Trilogy Pass Summary Date
-                    </label>
-                    <p className="text-xs text-[#595959] mb-3">
-                      Shown on Trilogy Pass registration option.
-                    </p>
-                  </div>
-                  <div>
-                    <input
-                      type="text"
-                      value={eventDates.trilogyDate}
-                      onChange={(e) => setEventDates({ ...eventDates, trilogyDate: e.target.value })}
-                      placeholder="e.g. REVEALING SOON"
-                      className="w-full h-12 bg-white border border-[#171717]/15 rounded-xl px-4 text-sm font-bold text-[#171717] focus:outline-none focus:border-[#294D3A] focus:ring-1 focus:ring-[#294D3A] transition-all"
-                    />
-                    <div className="flex gap-2 mt-2">
-                      <button
-                        type="button"
-                        onClick={() => setEventDates({ ...eventDates, trilogyDate: "REVEALING SOON" })}
-                        className="text-[10px] font-bold text-[#8C6A43] hover:underline uppercase"
-                      >
-                        + Set &quot;REVEALING SOON&quot;
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-              </div>
-
-              {/* Submit & Status Row */}
-              <div className="pt-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-[#171717]/10">
-                <div className="flex items-center gap-2 text-xs text-[#595959]">
-                  <Clock className="w-4 h-4 text-[#8C6A43]" />
-                  <span>
-                    {eventDates.updatedAt 
-                      ? `Last updated: ${new Date(eventDates.updatedAt).toLocaleString()}`
-                      : "Default system dates active"}
-                  </span>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={isSavingDates}
-                  className="w-full sm:w-auto px-8 h-12 bg-[#294D3A] hover:bg-[#1C3628] text-white rounded-xl font-bold text-xs tracking-widest uppercase transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-                >
-                  <Save className="w-4 h-4 text-[#D7B66A]" />
-                  <span>{isSavingDates ? "SAVING CHANGES..." : "SAVE & PUBLISH TO WEBSITE"}</span>
-                </button>
-              </div>
-            </form>
-          </div>
-        )}
-
-        {/* TAB 2: REGISTRATIONS TABLE */}
-        {activeTab === "registrations" && (
-          <div>
-            {/* Stats Header */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
-              <div>
-                <h2 className="text-3xl font-serif text-[#171717] mb-2">Registrations</h2>
-                <p className="text-[#595959] text-sm">
-                  Overview of all users who have registered for the Jawai Conservation Series.
-                </p>
-              </div>
-
-              <div className="flex flex-col sm:flex-row items-center gap-4">
-                {selectedIds.length > 0 && (
-                  <button 
-                    onClick={handleDeleteSelected}
-                    className="w-full sm:w-auto px-6 h-12 bg-red-500/10 hover:bg-red-500/20 text-red-600 rounded-2xl flex items-center justify-center gap-2 font-bold text-xs tracking-[0.1em] uppercase transition-colors"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    Delete ({selectedIds.length})
-                  </button>
-                )}
-                
-                <button 
-                  onClick={handleExportCSV}
-                  className="w-full sm:w-auto px-6 h-12 bg-[#294D3A] hover:bg-[#1C3628] text-white rounded-2xl flex items-center justify-center gap-2 font-bold text-xs tracking-[0.1em] uppercase transition-colors"
-                >
-                  <Download className="w-4 h-4 text-[#D7B66A]" />
-                  Export CSV
-                </button>
-                
-                <button 
-                  onClick={handleExportExcel}
-                  className="w-full sm:w-auto px-6 h-12 bg-[#8C6A43] hover:bg-[#705536] text-white rounded-2xl flex items-center justify-center gap-2 font-bold text-xs tracking-[0.1em] uppercase transition-colors"
-                >
-                  <Download className="w-4 h-4 text-white/80" />
-                  Export Excel
-                </button>
-
-                <div className="flex items-center gap-4 bg-white border border-[#171717]/10 rounded-2xl p-4 shadow-sm min-w-[200px]">
-                  <div className="w-12 h-12 bg-[#294D3A]/10 rounded-full flex items-center justify-center">
-                    <Users className="w-5 h-5 text-[#294D3A]" />
-                  </div>
-                  <div>
-                    <div className="text-[10px] font-bold tracking-[0.15em] text-[#8C6A43] uppercase mb-0.5">
-                      Total Entries
-                    </div>
-                    <div className="text-3xl font-bold text-[#171717]">
-                      {isLoading ? "-" : registrations.length}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Data Table */}
-            <div className="bg-white border border-[#171717]/10 rounded-[20px] shadow-sm overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm text-[#171717]">
-                  <thead className="bg-[#FAF8F5] border-b border-[#171717]/10 text-[10px] font-bold tracking-[0.1em] text-[#595959] uppercase">
-                    <tr>
-                      <th className="px-6 py-4 w-12">
-                        <input 
-                          type="checkbox" 
-                          className="w-4 h-4 rounded border-[#171717]/20 text-[#294D3A] focus:ring-[#294D3A]"
-                          checked={registrations.length > 0 && selectedIds.length === registrations.length}
-                          onChange={handleSelectAll}
-                        />
-                      </th>
-                      <th className="px-6 py-4">Runner Name</th>
-                      <th className="px-6 py-4">Contact</th>
-                      <th className="px-6 py-4">City</th>
-                      <th className="px-6 py-4">Event &amp; Distance</th>
-                      <th className="px-6 py-4 text-center">Payment</th>
-                      <th className="px-6 py-4 text-right">Registered On</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[#171717]/5">
-                    {isLoading ? (
-                      <tr>
-                        <td colSpan={7} className="px-6 py-12 text-center text-[#595959]">
-                          <div className="flex flex-col items-center gap-3">
-                            <span className="w-6 h-6 border-2 border-[#171717]/20 border-t-[#294D3A] rounded-full animate-spin" />
-                            <span className="text-xs tracking-widest uppercase">Loading Data...</span>
-                          </div>
-                        </td>
-                      </tr>
-                    ) : registrations.length === 0 ? (
-                      <tr>
-                        <td colSpan={7} className="px-6 py-12 text-center text-[#595959]">
-                          No registrations found in the database.
-                        </td>
-                      </tr>
-                    ) : (
-                      registrations.map((reg) => (
-                        <tr key={reg.id} className={`hover:bg-[#FAF8F5]/50 transition-colors ${selectedIds.includes(reg.id) ? 'bg-[#294D3A]/5' : ''}`}>
-                          <td className="px-6 py-4">
-                            <input 
-                              type="checkbox" 
-                              className="w-4 h-4 rounded border-[#171717]/20 text-[#294D3A] focus:ring-[#294D3A]"
-                              checked={selectedIds.includes(reg.id)}
-                              onChange={() => handleSelectOne(reg.id)}
-                            />
-                          </td>
-                          <td className="px-6 py-4 font-medium whitespace-nowrap">
-                            {reg.fullName}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex flex-col">
-                              <span>{reg.email}</span>
-                              <span className="text-xs text-[#595959] mt-0.5">{reg.phone}</span>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-[#595959]">
-                            {reg.city}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex flex-col">
-                              <span className="font-semibold text-[#294D3A]">{reg.runSeries}</span>
-                              <span className="text-xs text-[#8C6A43] font-bold uppercase mt-0.5">{reg.category}</span>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-center text-[12px]">
-                            {reg.paymentScreenshotUrl ? (
-                              <a href={reg.paymentScreenshotUrl} target="_blank" rel="noopener noreferrer" className="text-[#294D3A] underline font-medium hover:text-[#171717]">View SS</a>
-                            ) : (
-                              <span className="text-[#595959]/50">-</span>
-                            )}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-right text-xs text-[#595959]">
-                            {new Date(reg.createdAt).toLocaleDateString(undefined, {
-                              year: 'numeric', month: 'short', day: 'numeric',
-                              hour: '2-digit', minute: '2-digit'
-                            })}
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
+      {/* Main Content Area */}
+      <div className="flex-1 min-w-0 flex flex-col">
+        {/* Top Utility Header */}
+        <header className="sticky top-0 z-20 bg-[#FAF8F5]/95 backdrop-blur-md border-b border-[#304B38]/10 px-4 sm:px-8 h-16 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setIsMobileNavOpen(true)}
+              className="lg:hidden p-2 rounded-xl bg-white border border-[#304B38]/15 text-[#1F3026]"
+              aria-label="Open navigation drawer"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+            <div>
+              <span className="text-[10px] font-mono font-bold tracking-[0.2em] text-[#8C6A43] uppercase block leading-none">
+                JAWAI RUNNERS CMS
+              </span>
+              <span className="text-sm font-bold text-[#171717]">
+                {isSectionKey(activeNav)
+                  ? SECTION_META[activeNav].label
+                  : activeNav === "dashboard"
+                  ? "Overview Dashboard"
+                  : activeNav === "media"
+                  ? "Media Library"
+                  : activeNav === "instagramGallery"
+                  ? "Instagram & Video Gallery"
+                  : activeNav === "eventDates"
+                  ? "Event Dates Settings"
+                  : activeNav === "registrations"
+                  ? "Registrations Management"
+                  : activeNav === "websiteSettings"
+                  ? "Website Settings"
+                  : "Admin & Permissions"}
+              </span>
             </div>
           </div>
-        )}
 
+          <div className="flex items-center gap-2.5 text-xs">
+            <span
+              className={`hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full font-mono text-[10.5px] font-bold uppercase ${
+                firestoreAvailable
+                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                  : "bg-amber-50 text-amber-800 border border-amber-200"
+              }`}
+            >
+              <span
+                className={`w-1.5 h-1.5 rounded-full ${
+                  firestoreAvailable ? "bg-emerald-500" : "bg-amber-500"
+                }`}
+              />
+              {firestoreAvailable ? "Firestore Connected" : "Rules Setup Pending"}
+            </span>
+          </div>
+        </header>
+
+        {/* Scrollable Workspace Body */}
+        <main className="flex-1 p-4 sm:p-8 lg:p-10 max-w-[1320px] w-full mx-auto">
+          {activeNav === "dashboard" && (
+            <DashboardOverview
+              sectionsMap={sectionsMap}
+              mediaCount={mediaAssets.length}
+              registrationsCount={registrations.length}
+              eventDates={eventDates}
+              auditLogs={auditLogs}
+              firestoreAvailable={firestoreAvailable}
+              permissionError={permissionError}
+              isSeeding={isSeeding}
+              onSeedAll={handleSeedAllCms}
+              onNavigate={setActiveNav}
+            />
+          )}
+
+          {isSectionKey(activeNav) && (
+            <CmsEditorShell
+              envelope={sectionsMap[activeNav]}
+              isDirty={Boolean(draftEdits[activeNav])}
+              isBusy={isCmsBusy}
+              statusMessage={editorStatusMsg}
+              onToggleVisibility={(vis) => handleToggleVisibility(activeNav, vis)}
+              onSaveDraft={() => handleSaveDraftSection(activeNav)}
+              onPreview={() => handlePreviewSection(activeNav)}
+              onPublish={() => handlePublishSection(activeNav)}
+              onUnpublish={() => handleUnpublishSection(activeNav)}
+              onResetDefaults={() => handleResetSectionDefault(activeNav)}
+            >
+              {renderSectionEditor(activeNav)}
+            </CmsEditorShell>
+          )}
+
+          {activeNav === "media" && (
+            <MediaLibraryPanel
+              assets={mediaAssets}
+              onRefreshAssets={refreshMedia}
+              onRefreshSections={refreshCmsSections}
+              actorEmail={adminEmail}
+            />
+          )}
+
+          {activeNav === "instagramGallery" && (
+            <InstagramGalleryPanel
+              initiativeContent={getWorkingDraft("firstInitiative")}
+              mediaAssets={mediaAssets}
+              onMediaUploaded={(asset) => setMediaAssets((prev) => [asset, ...prev])}
+              actorEmail={adminEmail}
+              onSaveDraft={async (next) => {
+                setWorkingDraft("firstInitiative", next);
+                const updated = await saveSectionDraft("firstInitiative", next, {
+                  actorEmail: adminEmail,
+                  existingEnvelope: sectionsMap.firstInitiative as CmsSectionEnvelope<
+                    SectionContentMap["firstInitiative"]
+                  >,
+                });
+                setSectionsMap((prev) => ({ ...prev, firstInitiative: updated }));
+                clearDirty("firstInitiative");
+              }}
+              onPublish={async (next) => {
+                setWorkingDraft("firstInitiative", next);
+                const updated = await publishSection("firstInitiative", next, {
+                  actorEmail: adminEmail,
+                  existingEnvelope: sectionsMap.firstInitiative as CmsSectionEnvelope<
+                    SectionContentMap["firstInitiative"]
+                  >,
+                });
+                setSectionsMap((prev) => ({ ...prev, firstInitiative: updated }));
+                clearDirty("firstInitiative");
+              }}
+            />
+          )}
+
+          {activeNav === "eventDates" && (
+            <EventDatesPanel
+              eventDates={eventDates}
+              setEventDates={setEventDates}
+              isSavingDates={isSavingDates}
+              datesSaveSuccess={datesSaveSuccess}
+              datesSaveError={datesSaveError}
+              onSaveDates={handleSaveDates}
+              onResetToRevealingSoon={handleResetToRevealingSoon}
+            />
+          )}
+
+          {activeNav === "registrations" && (
+            <RegistrationsPanel
+              registrations={registrations}
+              isLoading={isLoadingRegistrations}
+              selectedIds={selectedIds}
+              onSelectAll={handleSelectAll}
+              onSelectOne={handleSelectOne}
+              onDeleteSelected={handleDeleteSelected}
+              onExportCSV={handleExportCSV}
+              onExportExcel={handleExportExcel}
+            />
+          )}
+
+          {activeNav === "websiteSettings" && (
+            <WebsiteSettingsPanel
+              settings={websiteSettings}
+              mediaAssets={mediaAssets}
+              onMediaUploaded={(asset) => setMediaAssets((prev) => [asset, ...prev])}
+              actorEmail={adminEmail}
+              onSave={async (next) => {
+                const saved = await saveWebsiteSettings(next, adminEmail);
+                setWebsiteSettings(saved);
+                setAuditLogs(await fetchAuditLogs());
+              }}
+            />
+          )}
+
+          {activeNav === "permissions" && (
+            <PermissionsPanel
+              currentEmail={adminEmail}
+              permissions={permissionsSettings}
+              isSeeding={isSeeding}
+              onSeedAll={handleSeedAllCms}
+              onExportBackupJson={handleExportBackupJson}
+              onSavePermissions={async (emails) => {
+                const saved = await savePermissionsSettings(emails, adminEmail);
+                setPermissionsSettings(saved);
+                setAuditLogs(await fetchAuditLogs());
+              }}
+            />
+          )}
+        </main>
       </div>
-    </main>
+    </div>
   );
 }

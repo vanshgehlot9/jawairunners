@@ -5,20 +5,10 @@ import Link from "next/link";
 import Image from "next/image";
 import { motion, AnimatePresence, useScroll, useMotionValueEvent } from "framer-motion";
 import { ArrowRight } from "lucide-react";
-
-type NavLink = {
-  name: string;
-  href: string;
-};
-
-const NAV_LINKS: NavLink[] = [
-  { name: "THE MOVEMENT", href: "#movement" },
-  { name: "THE EXPERIENCE", href: "#the-experience" },
-  { name: "FOUNDATION", href: "#foundation" },
-  { name: "FAQ", href: "#faq" }
-];
+import { useWebsiteSettings } from "@/lib/cms/use-cms";
 
 export function Navbar() {
+  const settings = useWebsiteSettings();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { scrollY } = useScroll();
@@ -58,8 +48,8 @@ export function Navbar() {
           <Link href="/" className="group flex items-center gap-3">
             <div className="relative w-9 h-9 lg:w-11 lg:h-11 rounded-lg overflow-hidden border border-[#304B38]/15 bg-[#FAF8F5] flex items-center justify-center shadow-xs">
               <Image
-                src="/logo.jpg"
-                alt="Jawai Runners"
+                src={settings.logoUrl || "/logo.jpg"}
+                alt={settings.brandName}
                 width={44}
                 height={44}
                 className="object-contain mix-blend-multiply w-7 h-7 lg:w-9 lg:h-9"
@@ -68,19 +58,19 @@ export function Navbar() {
             </div>
             <div className="flex flex-col">
               <span className="text-[13px] lg:text-[14px] font-bold tracking-[0.14em] text-[#171717] leading-none mb-1">
-                JAWAI RUNNERS
+                {settings.brandName}
               </span>
               <span className="text-[9px] font-bold tracking-[0.18em] text-[#C69A3A] uppercase leading-none">
-                RUN TO SAVE JAWAI
+                {settings.brandSubtitle}
               </span>
             </div>
           </Link>
 
           {/* Desktop Navigation */}
           <nav className="hidden lg:flex items-center gap-7 xl:gap-9" aria-label="Main Navigation">
-            {NAV_LINKS.map((link) => (
+            {settings.navbarLinks.map((link) => (
               <a
-                key={link.name}
+                key={link.id || link.name}
                 href={link.href}
                 className="text-[12px] font-bold tracking-[0.09em] text-[#171717]/80 hover:text-[#304B38] transition-colors uppercase relative py-1"
               >
@@ -92,10 +82,10 @@ export function Navbar() {
           {/* Right CTA */}
           <div className="hidden lg:flex items-center gap-5">
             <a
-              href="#registration"
+              href={settings.navbarCtaHref || "#registration"}
               className="inline-flex items-center justify-center gap-2 bg-[#294D3A] text-white rounded-[8px] hover:bg-[#1C3628] transition-all h-[42px] px-5 font-bold text-[11px] tracking-[0.12em] uppercase shadow-sm group"
             >
-              <span>JOIN THE RUN</span>
+              <span>{settings.navbarCtaText}</span>
               <ArrowRight className="w-3.5 h-3.5 text-[#C69A3A] group-hover:translate-x-1 transition-transform" />
             </a>
           </div>
@@ -138,9 +128,9 @@ export function Navbar() {
                 </p>
               </div>
 
-              {NAV_LINKS.map((link, idx) => (
+              {settings.navbarLinks.map((link, idx) => (
                 <a
-                  key={link.name}
+                  key={link.id || link.name}
                   href={link.href}
                   onClick={() => setIsMobileMenuOpen(false)}
                   className="text-[20px] font-bold text-[#171717] py-2 border-b border-[#171717]/10 flex items-center justify-between"
