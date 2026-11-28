@@ -579,6 +579,7 @@ export const INITIAL_SECTION_DATA: SectionContentMap = {
         description: "Family & eco-run with seed ball broadcasting along designated forest tracts.",
       },
     ],
+    showTrilogyPass: true,
     trilogyTitle: "ALL 3 RUNS — TRILOGY PASS",
     trilogySubtitle: "Complete Conservation Series + Special Medallion",
     trilogyTag: "RECOMMENDED",

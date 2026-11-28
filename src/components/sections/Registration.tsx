@@ -23,7 +23,7 @@ type ParticipantData = {
 function getRunSeriesOptions(
   dates: EventDatesConfig,
   runs: ThreeRunSummaryItem[],
-  trilogy: { title: string; subtitle: string; tag: string }
+  trilogy: { show: boolean; title: string; subtitle: string; tag: string }
 ) {
   const dateMap: Record<string, string> = {
     "run-1": dates.run1Date,
@@ -39,6 +39,10 @@ function getRunSeriesOptions(
       subtitle: r.subtitle,
       tag: r.tag,
     }));
+
+  if (!trilogy.show) {
+    return series;
+  }
 
   return [
     ...series,
@@ -155,8 +159,8 @@ export function Registration() {
       const newRegistrationRef = push(registrationsRef);
       await set(newRegistrationRef, {
         ...finalParticipantData,
-        runSeries: selectedRunSeries,
-        category: selectedCategory,
+        runSeries: activeRunValue,
+        category: activeCatValue,
         createdAt: new Date().toISOString()
       });
       // Trigger email sending
@@ -167,8 +171,8 @@ export function Registration() {
         },
         body: JSON.stringify({
           ...finalParticipantData,
-          runSeries: selectedRunSeries,
-          category: selectedCategory,
+          runSeries: activeRunValue,
+          category: activeCatValue,
         }),
       }).catch(err => console.error("Email send failed:", err));
 
@@ -188,14 +192,27 @@ export function Registration() {
   const runSeriesOptions = useMemo(
     () =>
       getRunSeriesOptions(eventDates, threeRuns.runs, {
+        show: content.showTrilogyPass !== false,
         title: content.trilogyTitle,
         subtitle: content.trilogySubtitle,
         tag: content.trilogyTag,
       }),
-    [eventDates, threeRuns.runs, content.trilogyTitle, content.trilogySubtitle, content.trilogyTag]
+    [
+      eventDates,
+      threeRuns.runs,
+      content.showTrilogyPass,
+      content.trilogyTitle,
+      content.trilogySubtitle,
+      content.trilogyTag,
+    ]
   );
-  const selectedRunData = runSeriesOptions.find((r) => r.id === selectedRunSeries);
-  const selectedCatData = content.categories.find((c) => c.id === selectedCategory);
+  const selectedRunData =
+    runSeriesOptions.find((r) => r.id === selectedRunSeries) || runSeriesOptions[0];
+  const selectedCatData =
+    content.categories.find((c) => c.id === selectedCategory) || content.categories[0];
+
+  const activeRunValue = selectedRunData?.id || selectedRunSeries;
+  const activeCatValue = selectedCatData?.id || selectedCategory;
 
   if (!isVisible) return null;
 
@@ -381,7 +398,7 @@ export function Registration() {
                         </label>
                         <div className="relative mb-6">
                           <select
-                            value={selectedRunSeries}
+                            value={activeRunValue}
                             onChange={(e) => setSelectedRunSeries(e.target.value)}
                             className="w-full h-14 bg-white border border-[#171717]/15 rounded-xl px-4 text-[14px] font-bold text-[#171717] focus:outline-none focus:border-[#294D3A] focus:ring-1 focus:ring-[#294D3A] transition-all appearance-none cursor-pointer"
                           >
@@ -411,7 +428,7 @@ export function Registration() {
                               type="button"
                               onClick={() => setSelectedCategory(cat.id)}
                               className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer flex items-center justify-between ${
-                                selectedCategory === cat.id
+                                activeCatValue === cat.id
                                   ? "bg-white border-[#294D3A] ring-2 ring-[#294D3A] shadow-sm"
                                   : "bg-white text-[#171717] border-[#171717]/15 hover:border-[#294D3A]/40"
                               }`}
@@ -424,9 +441,9 @@ export function Registration() {
                                 <p className="text-[11px] text-[#171717]/70 mt-0.5 line-clamp-1">{cat.description}</p>
                               </div>
                               <div className={`w-5 h-5 rounded-full border flex items-center justify-center flex-shrink-0 ml-3 ${
-                                selectedCategory === cat.id ? "border-[#294D3A] bg-[#294D3A] text-white" : "border-[#171717]/30"
+                                activeCatValue === cat.id ? "border-[#294D3A] bg-[#294D3A] text-white" : "border-[#171717]/30"
                               }`}>
-                                {selectedCategory === cat.id && <Check className="w-3 h-3 stroke-[3]" />}
+                                {activeCatValue === cat.id && <Check className="w-3 h-3 stroke-[3]" />}
                               </div>
                             </button>
                           ))}

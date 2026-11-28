@@ -95,7 +95,7 @@ export function ThreeRunsEditor({
                 </label>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                 <TextField
                   label="Run Number"
                   value={run.number}
@@ -120,6 +120,15 @@ export function ThreeRunsEditor({
                   onChange={(codeName) => {
                     const next = [...value.runs];
                     next[idx] = { ...run, codeName };
+                    onChange({ ...value, runs: next });
+                  }}
+                />
+                <TextField
+                  label="Dropdown Tag"
+                  value={run.tag}
+                  onChange={(tag) => {
+                    const next = [...value.runs];
+                    next[idx] = { ...run, tag };
                     onChange({ ...value, runs: next });
                   }}
                 />
@@ -658,12 +667,122 @@ export function RegistrationContentEditor({
         </div>
       </SectionGroup>
 
-      <SectionGroup title="Distance Categories, Eco Apparel & Eco-Pass">
+      <SectionGroup
+        title="Distance Categories (KM Options in Registration Step 2)"
+        subtitle="Edit, add, remove, or reorder the KM distance cards (e.g. 21 KM, 10 KM, 5 KM) shown during registration."
+      >
+        <div className="space-y-3">
+          {value.categories.map((cat, idx) => (
+            <div
+              key={cat.id}
+              className="p-4 rounded-xl bg-[#FAF8F5] border border-[#304B38]/12 space-y-3"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-mono font-bold text-[#8C6A43]">
+                  DISTANCE CATEGORY #{idx + 1}
+                </span>
+                <ItemOrderControls
+                  index={idx}
+                  total={value.categories.length}
+                  onMoveUp={() =>
+                    onChange({
+                      ...value,
+                      categories: moveArrayItem(value.categories, idx, idx - 1),
+                    })
+                  }
+                  onMoveDown={() =>
+                    onChange({
+                      ...value,
+                      categories: moveArrayItem(value.categories, idx, idx + 1),
+                    })
+                  }
+                  onDelete={
+                    value.categories.length > 1
+                      ? () =>
+                          onChange({
+                            ...value,
+                            categories: value.categories.filter((_, i) => i !== idx),
+                          })
+                      : undefined
+                  }
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <TextField
+                  label="Distance (e.g. 21 KM)"
+                  value={cat.distance}
+                  onChange={(distance) => {
+                    const next = [...value.categories];
+                    next[idx] = { ...cat, distance };
+                    onChange({ ...value, categories: next });
+                  }}
+                />
+                <div className="md:col-span-2">
+                  <TextField
+                    label="Category Format / Subtitle"
+                    value={cat.format}
+                    onChange={(format) => {
+                      const next = [...value.categories];
+                      next[idx] = { ...cat, format };
+                      onChange({ ...value, categories: next });
+                    }}
+                  />
+                </div>
+              </div>
+
+              <TextField
+                label="Category Description"
+                value={cat.description}
+                onChange={(description) => {
+                  const next = [...value.categories];
+                  next[idx] = { ...cat, description };
+                  onChange({ ...value, categories: next });
+                }}
+              />
+            </div>
+          ))}
+
+          <button
+            type="button"
+            onClick={() =>
+              onChange({
+                ...value,
+                categories: [
+                  ...value.categories,
+                  {
+                    id: `cat-${Date.now()}`,
+                    distance: "3 KM",
+                    format: "NATURE WALK",
+                    description: "Guided community conservation walk.",
+                  },
+                ],
+              })
+            }
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#294D3A]/10 hover:bg-[#294D3A]/20 text-[#294D3A] text-xs font-bold uppercase tracking-wider"
+          >
+            <Plus className="w-3.5 h-3.5" /> Add Distance Category (KM)
+          </button>
+        </div>
+      </SectionGroup>
+
+      <SectionGroup title="Run Event Dropdown (Trilogy Option), Eco Apparel & Eco-Pass">
         <TextField
           label="Eco Apparel Notice"
           value={value.ecoApparelNote}
           onChange={(ecoApparelNote) => onChange({ ...value, ecoApparelNote })}
         />
+
+        <label className="inline-flex items-center gap-2.5 p-3 rounded-xl bg-[#FAF8F5] border border-[#304B38]/15 cursor-pointer text-xs font-bold text-[#171717]">
+          <input
+            type="checkbox"
+            checked={value.showTrilogyPass !== false}
+            onChange={(e) => onChange({ ...value, showTrilogyPass: e.target.checked })}
+            className="rounded text-[#294D3A]"
+          />
+          <span>Show &quot;ALL 3 RUNS — TRILOGY PASS&quot; Option in Registration Run Dropdown</span>
+        </label>
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <TextField
             label="Trilogy Pass Title"
@@ -681,6 +800,7 @@ export function RegistrationContentEditor({
             onChange={(trilogyTag) => onChange({ ...value, trilogyTag })}
           />
         </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <TextField
             label="Eco-Pass Confirmation Title"
@@ -693,6 +813,41 @@ export function RegistrationContentEditor({
             onChange={(ecoPassSubtitle) => onChange({ ...value, ecoPassSubtitle })}
           />
         </div>
+      </SectionGroup>
+
+      <SectionGroup title="Environmental Pledge Checklist (Step 4)">
+        <TextField
+          label="Pledge Section Title"
+          value={value.pledgeTitle}
+          onChange={(pledgeTitle) => onChange({ ...value, pledgeTitle })}
+        />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <TextField
+            label="Pledge 1 Title"
+            value={value.pledge1Title}
+            onChange={(pledge1Title) => onChange({ ...value, pledge1Title })}
+          />
+          <TextField
+            label="Pledge 1 Text"
+            value={value.pledge1Description}
+            onChange={(pledge1Description) => onChange({ ...value, pledge1Description })}
+          />
+          <TextField
+            label="Pledge 2 Title"
+            value={value.pledge2Title}
+            onChange={(pledge2Title) => onChange({ ...value, pledge2Title })}
+          />
+          <TextField
+            label="Pledge 2 Text"
+            value={value.pledge2Description}
+            onChange={(pledge2Description) => onChange({ ...value, pledge2Description })}
+          />
+        </div>
+        <TextField
+          label="Pledge Footer Note"
+          value={value.pledgeFooterNote}
+          onChange={(pledgeFooterNote) => onChange({ ...value, pledgeFooterNote })}
+        />
       </SectionGroup>
     </div>
   );

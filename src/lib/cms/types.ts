@@ -298,6 +298,7 @@ export interface RegistrationContent {
     bankName: string;
   };
   categories: RegistrationCategoryItem[];
+  showTrilogyPass?: boolean;
   trilogyTitle: string;
   trilogySubtitle: string;
   trilogyTag: string;
